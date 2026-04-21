@@ -14,7 +14,7 @@ QJan is a queue prediction app with:
 
 ## Backend run (Python)
 
-> ⚠️ Backend folder mein `npm start` nahi chalega, kyunki backend Node app nahi hai.
+> Backend folder mein `npm start` nahi chalega, kyunki backend Node app nahi hai.
 
 ### 1) Create & activate virtual environment
 
