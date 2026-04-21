@@ -1,0 +1,38 @@
+# environment variables (secret keys)
+.env
+
+# python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# virtual environment
+venv/
+.env/
+.venv/
+
+# IDE files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# logs
+*.log
+
+# test cache
+.pytest_cache/
+
+# build files
+dist/
+build/
+
+# coverage
+htmlcov/
+.coverage
+
+# node modules
+node_modules/
