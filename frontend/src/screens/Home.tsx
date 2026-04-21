@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactElement } from 'react';
 import { getAllOffices, aiSearch } from '../api/queue';
 import { Office, OfficeType } from '../types';
 
@@ -39,7 +39,7 @@ const PostIcon = ({ color = '#DB2777' }: IconProps) => (
     </svg>
 );
 
-const ICON_MAP: Record<OfficeType, ({ color }: IconProps) => JSX.Element> = {
+const ICON_MAP: Record<OfficeType, ({ color }: IconProps) => ReactElement> = {
     'RTO': RTOIcon,
     'Passport': PassportIcon,
     'Hospital': HospitalIcon,
@@ -77,7 +77,7 @@ interface NavIconProps {
     active: boolean;
 }
 
-const NavIcon = ({ name, active }: NavIconProps): JSX.Element => {
+const NavIcon = ({ name, active }: NavIconProps): ReactElement => {
     const color = active ? '#1A56DB' : '#9CA3AF';
     if (name === 'Home') return (
         <svg width="20" height="20" viewBox="0 0 24 24" fill={color}>
@@ -112,7 +112,7 @@ interface OfficeCardProps {
     onSelect: (office: Office) => void;
 }
 
-const OfficeCard = ({ office, onSelect }: OfficeCardProps): JSX.Element => {
+const OfficeCard = ({ office, onSelect }: OfficeCardProps): ReactElement => {
     const statusKey = getStatusKey(office.status);
     const statusLabel = statusKey.charAt(0).toUpperCase() + statusKey.slice(1);
     const IconComponent = ICON_MAP[office.type as OfficeType] || RTOIcon;
@@ -142,7 +142,7 @@ interface Props {
     onSelect: (office: Office) => void;
 }
 
-export default function Home({ onSelect }: Props): JSX.Element {
+export default function Home({ onSelect }: Props): ReactElement {
     const [offices, setOffices] = useState<Office[]>([]);
     const [filter, setFilter] = useState<string>('All');
     const [loading, setLoading] = useState<boolean>(true);

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactElement } from 'react';
 import {
     getOfficeQueue, checkin, checkout,
     getAnomaly, planVisit
@@ -22,7 +22,7 @@ interface Props {
     onBack: () => void;
 }
 
-export default function Dashboard({ office, onBack }: Props): JSX.Element {
+export default function Dashboard({ office, onBack }: Props): ReactElement {
     const [data, setData] = useState<OfficeDetail | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
     const [inQueue, setInQueue] = useState<boolean>(false);

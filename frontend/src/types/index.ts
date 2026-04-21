@@ -50,3 +50,26 @@ export interface CheckinResponse {
   message: string;
   office_id: string;
 }
+
+export interface AnomalyResult {
+  anomaly: boolean;
+  severity: 'low' | 'medium' | 'high';
+  message: string;
+  suggestion: string;
+  current_count?: number;
+  historical_avg?: number;
+}
+
+export interface PlanResult {
+  recommended_slot: string;
+  expected_count: number;
+  reason: string;
+  alternative_slot: string;
+  tip: string;
+}
+
+export interface SearchResult {
+  matched_office_id: string | null;
+  reason: string;
+  confidence: 'high' | 'medium' | 'low';
+}
