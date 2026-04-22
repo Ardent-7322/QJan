@@ -33,7 +33,7 @@ QJan fixes this.
 |---|---|
 | Frontend | React + TypeScript |
 | Backend | Python + FastAPI |
-| AI | Groq — Llama 3.1 8B Instant |
+| AI | Groq - Llama 3.1 8B Instant |
 | Database | Firebase Firestore |
 | Notifications | Browser Notification API + localStorage |
 
