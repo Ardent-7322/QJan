@@ -182,26 +182,15 @@ export default function Dashboard({ office, onBack }: Props): ReactElement {
                 {anomaly && anomaly.anomaly && (
                     <div style={{
                         ...s.anomalyCard,
-                        ...(anomaly.severity === 'high' ? s.anomalyHigh
-                            : anomaly.severity === 'medium' ? s.anomalyMed
-                                : s.anomalyLow)
+                        ...(anomaly.severity === 'high' ? s.anomalyHigh : s.anomalyMed)
                     }}>
-                        <div style={s.anomalyTop}>
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-                                stroke={anomaly.severity === 'high' ? '#B91C1C' : '#92400E'}
-                                strokeWidth="2.5" strokeLinecap="round">
-                                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-                                <line x1="12" y1="9" x2="12" y2="13" />
-                                <line x1="12" y1="17" x2="12.01" y2="17" />
-                            </svg>
-                            <span style={s.anomalyTitle}>
-                                {anomaly.severity === 'high'
-                                    ? 'Unusual Crowd Detected'
-                                    : 'Higher Than Normal'}
-                            </span>
-                        </div>
-                        <div style={s.anomalyMsg}>{anomaly.message}</div>
-                        <div style={s.anomalySuggestion}>💡 {anomaly.suggestion}</div>
+                        <span style={s.anomalyTitle}>⚠ {anomaly.message}</span>
+                    </div>
+                )}
+
+                {anomaly && !anomaly.anomaly && (
+                    <div style={s.allClearCard}>
+                        <span style={s.allClearText}>✓ Normal queue for this time</span>
                     </div>
                 )}
 
@@ -233,15 +222,29 @@ export default function Dashboard({ office, onBack }: Props): ReactElement {
                         </div>
                     </div>
                 </div>
-
-                {/* Feature C — Visit Planner */}
+                {/* Mini Stats */}
+                <div style={s.miniStats}>
+                    <div style={s.miniStat}>
+                        <div style={s.miniLabel}>Avg per person</div>
+                        <div style={s.miniVal}>4.5 min</div>
+                    </div>
+                    <div style={s.divider} />
+                    <div style={s.miniStat}>
+                        <div style={s.miniLabel}>Today's peak</div>
+                        <div style={s.miniVal}>
+                            {data.best_time_today?.expected_count
+                                ? data.best_time_today.expected_count * 3
+                                : 50} people
+                        </div>
+                    </div>
+                </div>
+                {/* Visit Planner */}
                 {plan ? (
                     <div style={s.planCard}>
-                        <div style={s.planTitle}>Recommended Visit</div>
+                        <div style={s.planTitle}>Best time to visit</div>
                         <div style={s.planSlot}>{plan.recommended_slot}</div>
-                        <div style={s.planReason}>{plan.reason}</div>
-                        <div style={s.planAlt}>Alternative: {plan.alternative_slot}</div>
-                        <div style={s.planTip}>💡 {plan.tip}</div>
+                        <div style={s.planSub}>~{plan.expected_count} people expected</div>
+                        <div style={s.planTip}>{plan.tip}</div>
                         <button style={s.replanBtn}
                             onClick={() => { setPlan(null); setShowPlanner(true); }}>
                             Change slots
@@ -424,7 +427,8 @@ const s: Record<string, React.CSSProperties> = {
     planSlot: { fontSize: 20, fontWeight: 700, color: '#1A56DB', marginBottom: 4 },
     planReason: { fontSize: 13, color: '#374151', lineHeight: 1.5, marginBottom: 8 },
     planAlt: { fontSize: 12, color: '#6B7280', marginBottom: 6 },
-    planTip: { fontSize: 12, color: '#059669', marginBottom: 10 },
+    planSub: { fontSize: 12, color: '#6B7280', marginBottom: 8 },
+    planTip: { fontSize: 12, color: '#059669', marginBottom: 10, fontStyle: 'italic' },
     replanBtn: { fontSize: 12, color: '#1A56DB', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'Plus Jakarta Sans',sans-serif", padding: 0 },
     checkinWrap: { padding: '16px 16px 0' },
     checkinBtn: { width: '100%', background: '#1A56DB', color: '#fff', border: 'none', borderRadius: 14, padding: 16, fontSize: 15, fontWeight: 600, fontFamily: "'Plus Jakarta Sans',sans-serif", cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 },

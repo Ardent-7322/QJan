@@ -1,0 +1,9 @@
+Ek baar seed script chalao
+        ↓
+Offices Firebase mein store ho jaayein permanently
+        ↓
+User location on kare
+        ↓
+Backend Firebase se 20km range ke offices fetch kare
+        ↓
+Frontend pe dikhao

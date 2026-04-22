@@ -11,6 +11,17 @@ import {
 const BASE = process.env.REACT_APP_API_URL || 'http://localhost:8000/api/queue';
 const AI_BASE = process.env.REACT_APP_API_URL?.replace('/queue', '/ai') || 'http://localhost:8000/api/ai';
 
+export const getNearbyOffices = async (
+  lat: number,
+  lng: number,
+  radius: number = 20
+): Promise<Office[]> => {
+  const res = await axios.get<Office[]>(
+    `${BASE}/nearby?lat=${lat}&lng=${lng}&radius=${radius}`
+  );
+  return res.data;
+};
+
 export const getAllOffices = async (): Promise<Office[]> => {
   const res = await axios.get<Office[]>(`${BASE}/`);
   return res.data;

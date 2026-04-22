@@ -1,93 +1,85 @@
+import firebase_admin
+from firebase_admin import credentials, firestore
 from datetime import datetime
+import math
 
-OFFICES = {
-    "rto_jobner": {
-        "name": "RTO Jobner",
-        "type": "RTO",
-        "city": "Jobner",
-        "current_count": 15,
-        "avg_service_time": 4.5,
-        "history": {
-            "monday":    [45, 38, 22, 12, 8,  15],
-            "tuesday":   [40, 35, 20, 10, 7,  12],
-            "wednesday": [42, 33, 18, 11, 9,  14],
-            "thursday":  [38, 30, 17, 10, 6,  11],
-            "friday":    [50, 42, 25, 14, 10, 18],
-        }
-    },
-    "govt_hospital_phulera": {
-        "name": "Phulera Govt Hospital OPD",
-        "type": "Hospital",
-        "city": "Phulera",
-        "current_count": 41,
-        "avg_service_time": 3.0,
-        "history": {
-            "monday":    [60, 55, 40, 25, 15, 20],
-            "tuesday":   [55, 50, 38, 22, 12, 18],
-            "wednesday": [58, 52, 39, 23, 13, 19],
-            "thursday":  [50, 45, 35, 20, 10, 15],
-            "friday":    [65, 60, 45, 28, 18, 22],
-        }
-    },
-    "post_office_phulera": {
-        "name": "Post Office Phulera",
-        "type": "Post Office",
-        "city": "Phulera",
-        "current_count": 12,
-        "avg_service_time": 5.0,
-        "history": {
-            "monday":    [20, 18, 12, 8, 5, 9],
-            "tuesday":   [18, 15, 10, 7, 4, 8],
-            "wednesday": [22, 19, 13, 9, 6, 10],
-            "thursday":  [17, 14,  9, 6, 3, 7],
-            "friday":    [25, 22, 15, 10, 7, 11],
-        }
-    },
-    "passport_seva_jaipur": {
-        "name": "Passport Seva Jaipur",
-        "type": "Passport",
-        "city": "Jaipur",
-        "current_count": 4,
-        "avg_service_time": 6.0,
-        "history": {
-            "monday":    [30, 25, 15, 8, 5, 10],
-            "tuesday":   [28, 22, 14, 7, 4,  9],
-            "wednesday": [32, 27, 16, 9, 6, 11],
-            "thursday":  [25, 20, 12, 6, 3,  8],
-            "friday":    [35, 30, 18, 10, 7, 12],
-        }
-    }
-}
+if not firebase_admin._apps:
+    cred = credentials.Certificate("serviceAccountKey.json")
+    firebase_admin.initialize_app(cred)
 
-def seed_database():
-    print("Mock mode — no seeding needed ✅")
+db = firestore.client()
+
+def haversine(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
+    R = 6371
+    lat1, lng1, lat2, lng2 = map(math.radians, [lat1, lng1, lat2, lng2])
+    dlat = lat2 - lat1
+    dlng = lng2 - lng1
+    a = math.sin(dlat/2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlng/2)**2
+    return round(R * 2 * math.asin(math.sqrt(a)), 1)
+
+def get_nearby_offices(lat: float, lng: float, radius: float = 20) -> list:
+    docs = db.collection("offices").stream()
+    result = []
+    for doc in docs:
+        d = doc.to_dict()
+        dist = haversine(lat, lng, d.get("lat", 0), d.get("lng", 0))
+        if dist <= radius:
+            result.append({
+                "office_id": doc.id,
+                "name": d["name"],
+                "type": d["type"],
+                "city": d["city"],
+                "area": d.get("area", ""),
+                "lat": d.get("lat", 0),
+                "lng": d.get("lng", 0),
+                "distance_km": dist,
+                "current_count": d["current_count"],
+            })
+    result.sort(key=lambda x: x["distance_km"])
+    return result
 
 def get_all_offices() -> list:
+    docs = db.collection("offices").stream()
     result = []
-    for office_id, data in OFFICES.items():
+    for doc in docs:
+        d = doc.to_dict()
         result.append({
-            "office_id": office_id,
-            "name": data["name"],
-            "type": data["type"],
-            "city": data["city"],
-            "current_count": data["current_count"],
+            "office_id": doc.id,
+            "name": d["name"],
+            "type": d["type"],
+            "city": d["city"],
+            "area": d.get("area", ""),
+            "lat": d.get("lat", 0),
+            "lng": d.get("lng", 0),
+            "current_count": d["current_count"],
         })
     return result
 
-def get_queue_data(office_id: str) -> dict:
-    if office_id not in OFFICES:
+def get_queue_data(office_id: str):
+    doc = db.collection("offices").document(office_id).get()
+    if not doc.exists:
         return None
-    return OFFICES[office_id]
+    return doc.to_dict()
 
 def checkin_user(office_id: str) -> bool:
-    if office_id not in OFFICES:
+    ref = db.collection("offices").document(office_id)
+    doc = ref.get()
+    if not doc.exists:
         return False
-    OFFICES[office_id]["current_count"] += 1
+    current = doc.to_dict().get("current_count", 0)
+    ref.update({"current_count": current + 1})
+    db.collection("offices").document(office_id)\
+      .collection("checkins").add({
+          "timestamp": datetime.now(),
+          "status": "active"
+      })
     return True
 
 def checkout_user(office_id: str) -> bool:
-    if office_id not in OFFICES:
+    ref = db.collection("offices").document(office_id)
+    doc = ref.get()
+    if not doc.exists:
         return False
-    if OFFICES[office_id]["current_count"] > 0:
-        OFFICES[office_id]["current_count"] -= 1
+    current = doc.to_dict().get("current_count", 0)
+    ref.update({"current_count": max(0, current - 1)})
     return True

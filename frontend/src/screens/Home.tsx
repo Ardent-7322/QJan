@@ -1,6 +1,9 @@
+
 import { useEffect, useState, type ReactElement } from 'react';
-import { getAllOffices, aiSearch } from '../api/queue';
+import { getNearbyOffices, getAllOffices, aiSearch } from '../api/queue';
 import { Office, OfficeType } from '../types';
+import { getUserLocation, reverseGeocode } from '../utils/location';
+
 
 type IconProps = { color?: string };
 
@@ -134,6 +137,12 @@ const OfficeCard = ({ office, onSelect }: OfficeCardProps): ReactElement => {
                 </span>
                 <span style={s.cardCount}>{office.current_count} in queue</span>
             </div>
+            <div style={s.cardMeta}>
+                {office.area || office.city}
+                {office.distance_km !== undefined && (
+                    <span style={s.distBadge}> · {office.distance_km} km</span>
+                )}
+            </div>
         </div>
     );
 };
@@ -148,29 +157,70 @@ export default function Home({ onSelect }: Props): ReactElement {
     const [loading, setLoading] = useState<boolean>(true);
     const [searchQuery, setSearchQuery] = useState<string>('');
     const [searching, setSearching] = useState<boolean>(false);
+    const [locationLabel, setLocationLabel] = useState<string>('Detecting location...');
+    const [locationLoading, setLocationLoading] = useState<boolean>(true);
+    const [manualCity, setManualCity] = useState<string>('');
+    const [citySearched, setCitySearched] = useState<boolean>(false);
+    const [showCitySearch, setShowCitySearch] = useState<boolean>(false);
+    const [showLocationPrompt, setShowLocationPrompt] = useState<boolean>(true);
 
     useEffect(() => {
-        getAllOffices()
-            .then(setOffices)
-            .catch(console.error)
+        getUserLocation()
+            .then(async (coords) => {
+                const label = await reverseGeocode(coords.lat, coords.lng);
+                setLocationLabel(label);
+                setLocationLoading(false); // ← yahan
+                const nearby = await getNearbyOffices(coords.lat, coords.lng, 20);
+                setOffices(nearby);
+            })
+            .catch(() => {
+                setLocationLabel('Location unavailable');
+                setLocationLoading(false); // ← yahan bhi
+                getAllOffices().then(setOffices);
+            })
             .finally(() => setLoading(false));
     }, []);
 
-    const handleSearch = async (): Promise<void> => {
-        if (!searchQuery.trim()) return;
-        setSearching(true);
+    const loadNearbyOffices = (): void => {
+        setLocationLoading(true);
+        getUserLocation()
+            .then(async (coords) => {
+                const label = await reverseGeocode(coords.lat, coords.lng);
+                setLocationLabel(label);
+                setLocationLoading(false);
+                const nearby = await getNearbyOffices(coords.lat, coords.lng, 20);
+                setOffices(nearby);
+            })
+            .catch(() => {
+                setLocationLabel('Location unavailable');
+                setLocationLoading(false);
+                setShowCitySearch(true);
+            })
+            .finally(() => setLoading(false));
+    };
+
+    const handleSearch = async (city: string): Promise<void> => {
+        if (!city.trim()) return;
+        setLoading(true);
         try {
-            const result = await aiSearch(searchQuery);
-            if (result.matched_office_id) {
-                const matched = offices.find(
-                    o => o.office_id === result.matched_office_id
-                );
-                if (matched) onSelect(matched);
+            // Nominatim se city ke coordinates lo - free
+            const res = await fetch(
+                `https://nominatim.openstreetmap.org/search?q=${city}&format=json&limit=1`,
+                { headers: { 'Accept-Language': 'en' } }
+            );
+            const data = await res.json();
+            if (data.length > 0) {
+                const lat = parseFloat(data[0].lat);
+                const lng = parseFloat(data[0].lon);
+                const nearby = await getNearbyOffices(lat, lng, 20);
+                setOffices(nearby);
+                setLocationLabel(city);
+                setCitySearched(true);
             }
         } catch (err) {
             console.error(err);
         } finally {
-            setSearching(false);
+            setLoading(false);
         }
     };
 
@@ -214,32 +264,105 @@ export default function Home({ onSelect }: Props): ReactElement {
                         </svg>
                     </div>
                 </div>
-
-                {/* Search */}
-                <div style={s.searchBar}>
-                    <input
-                        style={s.searchInput}
-                        placeholder='Try "renew license near Andheri"...'
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                    />
-                    <div style={s.searchIcon} onClick={handleSearch}>
-                        {searching ? (
-                            <div style={s.spinner} />
-                        ) : (
-                            <svg width="14" height="14" viewBox="0 0 24 24"
-                                fill="none" stroke="white" strokeWidth="2.5"
-                                strokeLinecap="round">
-                                <circle cx="11" cy="11" r="8" />
-                                <path d="m21 21-4.35-4.35" />
+                {showLocationPrompt && (
+                    <div style={s.locationPrompt}>
+                        <div style={s.lpIcon}>
+                            <svg width="40" height="40" viewBox="0 0 24 24" fill="none"
+                                stroke="#1A56DB" strokeWidth="1.5" strokeLinecap="round">
+                                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" />
+                                <circle cx="12" cy="9" r="2.5" />
                             </svg>
+                        </div>
+                        <div style={s.lpTitle}>Find offices near you</div>
+                        <div style={s.lpSub}>
+                            Allow location access to see government offices within 20 km of you
+                        </div>
+                        <button style={s.lpAllow} onClick={() => {
+                            setShowLocationPrompt(false);
+                            loadNearbyOffices();
+                        }}>
+                            Allow location
+                        </button>
+                        <button style={s.lpDeny} onClick={() => {
+                            setShowLocationPrompt(false);
+                            setShowCitySearch(true);
+                        }}>
+                            Search by city instead
+                        </button>
+                    </div>
+                )}
+                {/* Location bar */}
+                <div style={s.locationBar}>
+                    <div style={{
+                        ...s.locationDot,
+                        background: locationLoading ? '#F59E0B' : '#1D9E75'
+                    }} />
+                    <div style={{ flex: 1 }}>
+                        <div style={s.locationLabel}>{locationLabel}</div>
+                        {!locationLoading && (
+                            <div style={s.locationSub}>Showing offices within 20 km</div>
                         )}
                     </div>
+                    {/* Change city button */}
+                    {!locationLoading && (
+                        <div
+                            style={s.changeCityBtn}
+                            onClick={() => setShowCitySearch(true)}>
+                            Change
+                        </div>
+                    )}
                 </div>
-                {!searchQuery && (
-                    <div style={s.searchHint}>
 
+                {/* City search modal */}
+                {showCitySearch && (
+                    <div style={s.cityModalOverlay}>
+                        <div style={s.cityModal}>
+                            <div style={s.cityModalTitle}>Search by city</div>
+                            <div style={s.cityModalSub}>
+                                Enter any city to see offices there
+                            </div>
+                            <div style={s.cityInputRow}>
+                                <input
+                                    style={s.cityInput}
+                                    placeholder="e.g. Delhi, Mumbai, Jodhpur..."
+                                    value={manualCity}
+                                    onChange={(e) => setManualCity(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                            handleSearch(manualCity);
+                                            setShowCitySearch(false);
+                                        }
+                                    }}
+                                    autoFocus
+                                />
+                                <button
+                                    style={s.citySearchBtn}
+                                    onClick={() => {
+                                        handleSearch(manualCity);
+                                        setShowCitySearch(false);
+                                    }}>
+                                    Search
+                                </button>
+                            </div>
+                            <div style={s.quickCities}>
+                                {['Delhi', 'Mumbai', 'Jodhpur', 'Udaipur', 'Kota'].map(city => (
+                                    <button
+                                        key={city}
+                                        style={s.quickCityBtn}
+                                        onClick={() => {
+                                            handleSearch(city);
+                                            setShowCitySearch(false);
+                                        }}>
+                                        {city}
+                                    </button>
+                                ))}
+                            </div>
+                            <button
+                                style={s.cityModalCancel}
+                                onClick={() => setShowCitySearch(false)}>
+                                Cancel
+                            </button>
+                        </div>
                     </div>
                 )}
             </div>
@@ -345,4 +468,26 @@ const s: Record<string, React.CSSProperties> = {
     bottomNav: { position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: 390, background: '#fff', borderTop: '0.5px solid #EAECF0', display: 'flex', padding: '10px 0 16px', zIndex: 100 },
     navItem: { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, cursor: 'pointer' },
     navLabel: { fontSize: 10, fontWeight: 500, color: '#9CA3AF' },
+    locationBar: { display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: '#F4F6FB', border: '0.5px solid #EAECF0', borderRadius: 12, marginBottom: 14 },
+    locationDot: { width: 8, height: 8, borderRadius: '50%', background: '#1D9E75', flexShrink: 0, animation: 'pulse 2s infinite' },
+    locationLabel: { fontSize: 13, fontWeight: 500, color: '#111827' },
+    locationSub: { fontSize: 11, color: '#9CA3AF', marginTop: 2 },
+    distBadge: { color: '#1A56DB', fontWeight: 600 },
+    changeCityBtn: { fontSize: 12, color: '#1A56DB', fontWeight: 500, cursor: 'pointer' },
+    cityModalOverlay: { position: 'fixed' as const, top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 300 },
+    cityModal: { background: '#fff', borderRadius: '20px 20px 0 0', padding: '24px 20px 36px', width: '100%', maxWidth: 390 },
+    cityModalTitle: { fontSize: 17, fontWeight: 700, color: '#111827', marginBottom: 4 },
+    cityModalSub: { fontSize: 13, color: '#6B7280', marginBottom: 16 },
+    cityInputRow: { display: 'flex', gap: 8, marginBottom: 16 },
+    cityInput: { flex: 1, border: '0.5px solid #EAECF0', borderRadius: 10, padding: '10px 14px', fontSize: 14, fontFamily: "'Plus Jakarta Sans',sans-serif", outline: 'none' },
+    citySearchBtn: { background: '#1A56DB', color: '#fff', border: 'none', borderRadius: 10, padding: '10px 16px', fontSize: 13, fontWeight: 600, fontFamily: "'Plus Jakarta Sans',sans-serif", cursor: 'pointer' },
+    quickCities: { display: 'flex', gap: 8, flexWrap: 'wrap' as const, marginBottom: 16 },
+    quickCityBtn: { background: '#F4F6FB', border: '0.5px solid #EAECF0', borderRadius: 20, padding: '6px 14px', fontSize: 12, color: '#374151', cursor: 'pointer', fontFamily: "'Plus Jakarta Sans',sans-serif" },
+    cityModalCancel: { width: '100%', background: 'transparent', border: 'none', color: '#6B7280', fontSize: 14, fontFamily: "'Plus Jakarta Sans',sans-serif", cursor: 'pointer', padding: 8 },
+    locationPrompt: { display: 'flex', flexDirection: 'column' as const, alignItems: 'center', justifyContent: 'center', minHeight: '100vh', padding: '0 32px', background: '#fff', gap: 16 },
+    lpIcon: { width: 80, height: 80, background: '#EBF2FF', borderRadius: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
+    lpTitle: { fontSize: 22, fontWeight: 700, color: '#111827', textAlign: 'center' as const },
+    lpSub: { fontSize: 14, color: '#6B7280', textAlign: 'center' as const, lineHeight: 1.6 },
+    lpAllow: { width: '100%', background: '#1A56DB', color: '#fff', border: 'none', borderRadius: 14, padding: 16, fontSize: 15, fontWeight: 600, fontFamily: "'Plus Jakarta Sans',sans-serif", cursor: 'pointer', marginTop: 8 },
+    lpDeny: { width: '100%', background: 'transparent', border: '0.5px solid #EAECF0', borderRadius: 14, padding: 14, fontSize: 14, color: '#6B7280', fontFamily: "'Plus Jakarta Sans',sans-serif", cursor: 'pointer' },
 };

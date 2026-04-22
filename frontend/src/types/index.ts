@@ -2,8 +2,12 @@
 export interface Office {
   office_id: string;
   name: string;
-  type: OfficeType;
+  type: OfficeType | string;
   city: string;
+  area?: string;
+  lat?: number;
+  lng?: number;
+  distance_km?: number;
   current_count: number;
   status: string;
 }
