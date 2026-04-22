@@ -1,33 +1,29 @@
-# QJan — Government Queue Predictor
+# QJan
 
-> **Jaane se pehle Jaane** — Know before you go.
-
-Crores of Indians waste hours every year standing in government office queues with zero information. QJan solves this by letting citizens check live queue counts, predicted wait times, and the best time to visit — before they leave home.
+QJan helps you check how long the queue is at government offices before you leave home. No more wasting hours standing in line without knowing when your turn will come.
 
 ---
 
-## The Problem
+## Problem
 
-A salaried employee needs to renew his driving license at the RTO. He wakes up early, skips breakfast, drives 40 minutes — only to find 60 people already waiting. No display board. No token system. No way to know.
+People visit offices like RTO, Passport Seva, hospitals, and post offices without any idea how crowded it is. Sometimes you wait 3 hours for work that takes 5 minutes. There is no system, no display board, no way to know.
 
-**3 hours of waiting. 5 minutes of actual work.**
-
-This happens every single day at RTOs, Passport Seva Kendras, government hospitals, post offices, and tahsildar offices across India.
-
-**QJan gives citizens the information that was always their right — but nobody gave them.**
+QJan fixes this.
 
 ---
 
 ## Features
 
-- **Live Queue Counter** — Real-time people count updated every 10 seconds
-- **Wait Time Predictor** — Estimates wait based on current count and historical service time
-- **Smart Time Suggester** — Shows the best time slot to visit today based on historical patterns
-- **AI Natural Language Search** — Type "renew driving license near me" and land on the right office instantly
-- **AI Anomaly Detector** — Detects unusual crowd spikes and explains them in plain language
-- **AI Visit Planner** — Pick your free slots, AI recommends the historically quietest time
-- **Anonymous Check-in** — No account, no login, no data stored. Just tap and contribute
-- **Office Watch + Surge Alerts** — Star an office, set a quiet threshold, get browser notifications when queue drops or surges while you are en-route
+| Feature | What it does |
+|---|---|
+| Live Queue Count | Updates every 10 seconds so you always see the current situation |
+| Wait Time Prediction | Tells you roughly how long you will wait based on people ahead |
+| Best Time Suggester | Finds the quietest slot to visit today based on historical data |
+| AI Search | Type what you need in plain words and it finds the right office |
+| AI Anomaly Detector | Notices unusual crowds and tells you what to do |
+| AI Visit Planner | You pick your free slots, AI picks the best one |
+| Anonymous Check-in | No account, no login, just tap and contribute |
+| Surge Alerts | Notifies you when queue drops or spikes while you are on the way |
 
 ---
 
@@ -37,101 +33,63 @@ This happens every single day at RTOs, Passport Seva Kendras, government hospita
 |---|---|
 | Frontend | React + TypeScript |
 | Backend | Python + FastAPI |
-| AI | Groq API — Llama 3.1 8B Instant |
+| AI | Groq - Llama 3.1 8B Instant |
 | Database | Firebase Firestore |
-| Frontend Deploy | Vercel |
-| Backend Deploy | Railway |
+| Notifications | Browser Notification API + localStorage |
 
 ---
 
-## Project Structure
+## How It Predicts
+
+**Wait time formula**
 
 ```
-QJan/
-  backend/
-    main.py               — FastAPI app entry point
-    routes/
-      queue.py            — Queue endpoints
-      ai.py               — AI endpoints
-    services/
-      firebase.py         — Database layer
-      predictor.py        — Wait time prediction logic
-      ai.py               — Groq AI integration
-    data/
-      mock_data.py        — Mock office data for development
-  frontend/
-    src/
-      screens/
-        Splash.tsx         — Splash screen
-        Home.tsx           — Office listing + AI search
-        Dashboard.tsx      — Live queue dashboard
-      api/
-        queue.ts           — API calls
-      utils/
-        notifications.ts   — Browser notification logic
-        watchlist.ts       — localStorage watchlist
-        watcher.ts         — Background queue watcher
-      types/
-        index.ts           — TypeScript type definitions
+Wait Time = People in Queue x Avg Service Time x 1.1 buffer
 ```
+
+**Best time logic**
+
+Looks at which hour historically has the lowest queue for that day of the week. No machine learning. Just clean pattern matching on real data.
 
 ---
 
-## How the Prediction Works
+## Pros and Cons
 
-```
-Wait Time = People in Queue × Avg Service Time per Person × 1.1 buffer
+**Pros**
 
-Best Time = Slot with historically lowest queue count for today's day of week
-```
+- Works without any government involvement
+- Fully anonymous so no privacy concerns
+- Gets smarter as more people use it
+- AI makes it usable even if you do not know which office handles what
+- Surge alerts help when queue changes while you are already travelling
 
-No machine learning required. Clean, explainable math that works with real crowd data.
+**Cons**
+
+- Accuracy depends on how many people are actively checking in
+- Early stage predictions may be off with low user count
+- Browser notifications require permission and an open tab
+- Not a native app so background features are limited
 
 ---
 
 ## Getting Started
 
-### Prerequisites
-
-- Python 3.10+
-- Node.js 18+
-- Groq API key — free at console.groq.com
-
----
-
-### Backend Setup
+**Backend**
 
 ```powershell
 cd backend
-python -m venv .venv
-
-# Windows
 .venv\Scripts\activate
-
-# macOS / Linux
-source .venv/bin/activate
-
 pip install -r requirements.txt
-```
-
-Create `.env` inside `backend/` —
-
-```env
-GROQ_API_KEY=your_groq_key_here
-```
-
-Start the server —
-
-```powershell
 uvicorn main:app --reload
 ```
 
-Backend runs at http://localhost:8000
-Interactive API docs at http://localhost:8000/docs
+Create a `.env` file inside `backend/`
 
----
+```
+GROQ_API_KEY=your_key_here
+```
 
-### Frontend Setup
+**Frontend**
 
 ```powershell
 cd frontend
@@ -139,70 +97,10 @@ npm install
 npm start
 ```
 
-Create `.env` inside `frontend/` —
+Create a `.env` file inside `frontend/`
 
-```env
+```
 REACT_APP_API_URL=http://localhost:8000/api/queue
 ```
 
-Frontend runs at http://localhost:3000
-
----
-
-## API Reference
-
-| Method | Endpoint | Description |
-|---|---|---|
-| GET | `/api/queue/` | List all offices with live status |
-| GET | `/api/queue/{office_id}` | Live queue + wait time + best time |
-| POST | `/api/queue/{office_id}/checkin` | Anonymous check-in |
-| POST | `/api/queue/{office_id}/checkout` | Anonymous check-out |
-| POST | `/api/ai/search` | Natural language office search |
-| GET | `/api/ai/anomaly/{office_id}` | AI anomaly detection |
-| POST | `/api/ai/plan` | AI visit planner |
-
----
-
-## Office Types Supported
-
-- RTO — Regional Transport Office
-- Passport Seva Kendra
-- Government Hospital OPD
-- Post Office
-- Tahsildar / Collector Office
-
----
-
-## Why This Matters
-
-| Pain | QJan's Answer |
-|---|---|
-| No information before leaving home | Live queue count + predicted wait |
-| Wasted half days at wrong times | Historical best time suggestion |
-| Confusing which branch to go to | AI natural language search |
-| Sudden queue spikes mid-journey | En-route surge notification |
-| Privacy concerns | 100% anonymous — no account needed |
-
----
-
-## Roadmap
-
-- Firebase Firestore for persistent real-time data
-- WhatsApp / SMS check-in for feature phones
-- ML-based prediction using weeks of historical data
-- QR codes outside offices for zero-friction check-in
-- Multi-language support — Hindi, Marathi, Tamil, Telugu
-
----
-
-## Built With
-
-This project was built as a hackathon project to demonstrate how civic technology can solve real problems faced by ordinary Indian citizens — without waiting for the government to act.
-
-**Stack:** Python · FastAPI · React · TypeScript · Groq AI · Firebase · Vercel · Railway
-
----
-
-## Author
-
-[github.com/Ardent-7322](https://github.com/Ardent-7322)
+API docs available at `http://localhost:8000/docs`
