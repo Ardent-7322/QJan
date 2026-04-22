@@ -239,7 +239,7 @@ export default function Home({ onSelect }: Props): ReactElement {
                 </div>
                 {!searchQuery && (
                     <div style={s.searchHint}>
-                        AI powered — describe what you need in plain words
+
                     </div>
                 )}
             </div>

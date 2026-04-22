@@ -1,12 +1,31 @@
-import google.generativeai as genai
+from groq import Groq
 from dotenv import load_dotenv
 from services.firebase import get_all_offices, get_queue_data
 import os
 import json
+import re
 
 load_dotenv()
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-model = genai.GenerativeModel("gemini-1.5-flash")
+
+client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+
+
+def clean_json(text: str) -> str:
+    # Remove markdown backticks
+    text = text.replace("```json", "").replace("```", "").strip()
+    # Extract only the JSON object
+    match = re.search(r'\{.*\}', text, re.DOTALL)
+    if match:
+        return match.group(0)
+    return text
+
+def ask_groq(prompt: str) -> str:
+    response = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.3,
+    )
+    return response.choices[0].message.content.strip()
 
 # ─────────────────────────────────────────
 # FEATURE A — Natural Language Search
@@ -29,25 +48,26 @@ User query: "{query}"
 Available offices:
 {offices_text}
 
-Based on the user's query, return ONLY a JSON object like this:
+Based on the user query, return ONLY a JSON object like this:
 {{
   "matched_office_id": "rto_andheri",
   "reason": "One line explanation why this office matches",
-  "confidence": "high/medium/low"
+  "confidence": "high"
 }}
 
-If no office matches, return:
+If no office matches return:
 {{
   "matched_office_id": null,
   "reason": "No matching office found",
   "confidence": "low"
 }}
 
-Return ONLY the JSON. No extra text.
+Return ONLY raw JSON. No markdown. No backticks. No explanation.
 """
-    response = model.generate_content(prompt)
-    text = response.text.strip().replace("```json","").replace("```","")
-    return json.loads(text)
+    text = ask_groq(prompt)
+    # Clean any accidental markdown
+    text = text.replace("```json", "").replace("```", "").strip()
+    return json.loads(clean_json(text)) 
 
 
 # ─────────────────────────────────────────
@@ -64,10 +84,8 @@ async def explain_anomaly(office_id: str) -> dict:
 
     from datetime import datetime
     today = datetime.now().strftime("%A").lower()
-    hour_index = min(
-        max(datetime.now().hour - 9, 0), 5
-    )
-    slots = ["9am","10am","11am","12pm","2pm","3pm"]
+    hour_index = min(max(datetime.now().hour - 9, 0), 5)
+    slots = ["9am", "10am", "11am", "12pm", "2pm", "3pm"]
     current_slot = slots[hour_index]
 
     historical_avg = 0
@@ -82,28 +100,28 @@ Current queue count: {current} people
 Current time slot: {current_slot}
 Historical average for this slot on {today}: {historical_avg} people
 
-Analyze if this is an anomaly and explain in simple Indian English.
+Analyze if this is an anomaly and explain in simple friendly English.
 
-Return ONLY a JSON object:
+Return ONLY a raw JSON object like this:
 {{
-  "anomaly": true or false,
-  "severity": "low/medium/high",
-  "message": "One friendly sentence explaining the situation to the user",
-  "suggestion": "One actionable suggestion for the user"
+  "anomaly": true,
+  "severity": "high",
+  "message": "Queue is much higher than usual for this time.",
+  "suggestion": "Try visiting after 2pm when it usually gets quieter."
 }}
 
-Return ONLY the JSON. No extra text.
+Return ONLY raw JSON. No markdown. No backticks. No explanation.
 """
-    response = model.generate_content(prompt)
-    text = response.text.strip().replace("```json","").replace("```","")
-    result = json.loads(text)
+    text = ask_groq(prompt)
+    text = text.replace("```json", "").replace("```", "").strip()
+    result = json.loads(clean_json(text)) 
     result["current_count"] = current
     result["historical_avg"] = historical_avg
     return result
 
 
 # ─────────────────────────────────────────
-# FEATURE C — Smart Visit Planner
+# FEATURE C — Visit Planner
 # ─────────────────────────────────────────
 
 async def plan_visit(office_id: str, free_slots: list[str]) -> dict:
@@ -113,7 +131,6 @@ async def plan_visit(office_id: str, free_slots: list[str]) -> dict:
 
     history = data.get("history", {})
     history_text = json.dumps(history, indent=2)
-
     slots_text = ", ".join(free_slots)
 
     prompt = f"""
@@ -122,22 +139,22 @@ You are a smart visit planner for QJan — a government office queue app in Indi
 Office: {data['name']}
 User's available slots: {slots_text}
 
-Historical queue data (day → [9am,10am,11am,12pm,2pm,3pm] counts):
+Historical queue data (day → [9am, 10am, 11am, 12pm, 2pm, 3pm] counts):
 {history_text}
 
-Based on historical data, recommend the BEST slot for the user to visit.
+Based on historical data recommend the BEST slot for the user.
 
-Return ONLY a JSON object:
+Return ONLY a raw JSON object like this:
 {{
   "recommended_slot": "Thursday 2pm",
   "expected_count": 8,
-  "reason": "Friendly one sentence explanation",
+  "reason": "Thursday afternoons historically have the lowest queue.",
   "alternative_slot": "Tuesday 11am",
-  "tip": "One practical tip for the visit"
+  "tip": "Carry all documents to avoid multiple visits."
 }}
 
-Return ONLY the JSON. No extra text.
+Return ONLY raw JSON. No markdown. No backticks. No explanation.
 """
-    response = model.generate_content(prompt)
-    text = response.text.strip().replace("```json","").replace("```","")
-    return json.loads(text)
+    text = ask_groq(prompt)
+    text = text.replace("```json", "").replace("```", "").strip()
+    return json.loads(clean_json(text))

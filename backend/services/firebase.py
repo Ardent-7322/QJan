@@ -1,25 +1,93 @@
-#Mock for now - firebase is not being used yet in the backend, but this will be used in the future when we need to integrate with firebase for authentication and database services.
+from datetime import datetime
 
-from data.mock_data import OFFICES
+OFFICES = {
+    "rto_jobner": {
+        "name": "RTO Jobner",
+        "type": "RTO",
+        "city": "Jobner",
+        "current_count": 15,
+        "avg_service_time": 4.5,
+        "history": {
+            "monday":    [45, 38, 22, 12, 8,  15],
+            "tuesday":   [40, 35, 20, 10, 7,  12],
+            "wednesday": [42, 33, 18, 11, 9,  14],
+            "thursday":  [38, 30, 17, 10, 6,  11],
+            "friday":    [50, 42, 25, 14, 10, 18],
+        }
+    },
+    "govt_hospital_phulera": {
+        "name": "Phulera Govt Hospital OPD",
+        "type": "Hospital",
+        "city": "Phulera",
+        "current_count": 41,
+        "avg_service_time": 3.0,
+        "history": {
+            "monday":    [60, 55, 40, 25, 15, 20],
+            "tuesday":   [55, 50, 38, 22, 12, 18],
+            "wednesday": [58, 52, 39, 23, 13, 19],
+            "thursday":  [50, 45, 35, 20, 10, 15],
+            "friday":    [65, 60, 45, 28, 18, 22],
+        }
+    },
+    "post_office_phulera": {
+        "name": "Post Office Phulera",
+        "type": "Post Office",
+        "city": "Phulera",
+        "current_count": 12,
+        "avg_service_time": 5.0,
+        "history": {
+            "monday":    [20, 18, 12, 8, 5, 9],
+            "tuesday":   [18, 15, 10, 7, 4, 8],
+            "wednesday": [22, 19, 13, 9, 6, 10],
+            "thursday":  [17, 14,  9, 6, 3, 7],
+            "friday":    [25, 22, 15, 10, 7, 11],
+        }
+    },
+    "passport_seva_jaipur": {
+        "name": "Passport Seva Jaipur",
+        "type": "Passport",
+        "city": "Jaipur",
+        "current_count": 4,
+        "avg_service_time": 6.0,
+        "history": {
+            "monday":    [30, 25, 15, 8, 5, 10],
+            "tuesday":   [28, 22, 14, 7, 4,  9],
+            "wednesday": [32, 27, 16, 9, 6, 11],
+            "thursday":  [25, 20, 12, 6, 3,  8],
+            "friday":    [35, 30, 18, 10, 7, 12],
+        }
+    }
+}
 
-def get_all_offices() -> dict:
-    return OFFICES
+def seed_database():
+    print("Mock mode — no seeding needed ✅")
+
+def get_all_offices() -> list:
+    result = []
+    for office_id, data in OFFICES.items():
+        result.append({
+            "office_id": office_id,
+            "name": data["name"],
+            "type": data["type"],
+            "city": data["city"],
+            "current_count": data["current_count"],
+        })
+    return result
 
 def get_queue_data(office_id: str) -> dict:
     if office_id not in OFFICES:
         return None
     return OFFICES[office_id]
 
-def checkin_user(office_id: str, user_id: str | None = None) -> bool:
+def checkin_user(office_id: str) -> bool:
     if office_id not in OFFICES:
         return False
     OFFICES[office_id]["current_count"] += 1
     return True
 
-def checkout_user(office_id: str, user_id: str | None = None) -> bool:
-    if office_id not in OFFICES :
+def checkout_user(office_id: str) -> bool:
+    if office_id not in OFFICES:
         return False
     if OFFICES[office_id]["current_count"] > 0:
         OFFICES[office_id]["current_count"] -= 1
-        
     return True
