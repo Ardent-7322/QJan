@@ -35,13 +35,21 @@ export default function Dashboard({ office, onBack }: Props): ReactElement {
     const [showPlanner, setShowPlanner] = useState<boolean>(false);
     const [selectedSlots, setSelectedSlots] = useState<string[]>([]);
     const [planLoading, setPlanLoading] = useState<boolean>(false);
+    const [checkinError, setCheckinError] = useState<string | null>(null);
+    const [apiError, setApiError] = useState<string | null>(null);
 
     useEffect(() => {
         setStarred(isWatched(office.office_id));
 
         getOfficeQueue(office.office_id)
             .then(setData)
-            .catch(console.error)
+            .catch((err: any) => {
+                if (err.message === 'network_error') {
+                    setApiError('Unable to connect. Please check your connection.');
+                } else {
+                    setApiError('Could not load office data. Please try again.');
+                }
+            })
             .finally(() => setLoading(false));
 
         getAnomaly(office.office_id)
@@ -56,15 +64,26 @@ export default function Dashboard({ office, onBack }: Props): ReactElement {
     }, [office]);
 
     const handleCheckin = async (): Promise<void> => {
-        if (!inQueue) {
-            await checkin(office.office_id);
-            setInQueue(true);
-        } else {
-            await checkout(office.office_id);
-            setInQueue(false);
+        setCheckinError(null);
+        try {
+            if (!inQueue) {
+                await checkin(office.office_id);
+                setInQueue(true);
+            } else {
+                await checkout(office.office_id);
+                setInQueue(false);
+            }
+            const updated = await getOfficeQueue(office.office_id);
+            setData(updated);
+        } catch (err: any) {
+            if (err.message === 'rate_limited') {
+                setCheckinError('You checked in recently. Please wait a few minutes before checking in again.');
+            } else if (err.message === 'network_error') {
+                setCheckinError('Network error. Please check your connection and try again.');
+            } else {
+                setCheckinError('Something went wrong. Please try again.');
+            }
         }
-        const updated = await getOfficeQueue(office.office_id);
-        setData(updated);
     };
 
     const toggleStar = (): void => {
@@ -115,6 +134,18 @@ export default function Dashboard({ office, onBack }: Props): ReactElement {
     };
 
     if (loading) return <div style={s.loading}>Loading...</div>;
+    if (apiError) return (
+        <div style={s.loading}>
+            <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: 14, color: '#6B7280', marginBottom: 12 }}>{apiError}</div>
+                <button
+                    onClick={() => { setApiError(null); setLoading(true); getOfficeQueue(office.office_id).then(setData).catch(() => setApiError('Still unable to load. Please try again.')).finally(() => setLoading(false)); }}
+                    style={{ background: '#1A56DB', color: '#fff', border: 'none', borderRadius: 10, padding: '10px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: "'Inter',sans-serif" }}>
+                    Retry
+                </button>
+            </div>
+        </div>
+    );
     if (!data) return <div style={s.loading}>Office not found.</div>;
 
     return (
@@ -272,12 +303,19 @@ export default function Dashboard({ office, onBack }: Props): ReactElement {
                             stroke="white" strokeWidth="2.5" strokeLinecap="round">
                             <polyline points="20 6 9 17 4 12" />
                         </svg>
-                        {inQueue ? "You're in the queue" : "I'm joining the queue"}
+                        {inQueue ? "You're in the queue" : "I'm here now"}
                     </button>
                     {inQueue && (
                         <button style={s.checkoutBtn} onClick={handleCheckin}>
                             I've left the queue
                         </button>
+                    )}
+
+                    <div style={s.anonNote}>
+                        Your check-in helps others see real-time queue data · No account needed
+                    </div>
+                    {checkinError && (
+                        <div style={s.checkinError}>{checkinError}</div>
                     )}
 
                     {/* En Route Toggle */}
@@ -296,10 +334,6 @@ export default function Dashboard({ office, onBack }: Props): ReactElement {
                             </div>
                         </div>
                     )}
-
-                    <div style={s.anonNote}>
-                        Anonymous · No account · No data stored
-                    </div>
                 </div>
             </div>
 
@@ -421,7 +455,7 @@ const s: Record<string, React.CSSProperties> = {
     btLabel: { fontSize: 11, color: '#065F46', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 3 },
     btVal: { fontSize: 15, fontWeight: 700, color: '#065F46' },
     btSub: { fontSize: 12, color: '#059669', marginTop: 1 },
-    planBtn: { display: 'flex', alignItems: 'center', gap: 8, background: '#EBF2FF', border: '0.5px solid #BFDBFE', borderRadius: 12, padding: '12px 16px', fontSize: 13, fontWeight: 600, color: '#1A56DB', cursor: 'pointer', margin: '12px 16px 0', width: 'calc(100% - 32px)', justifyContent: 'center', fontFamily: "'Plus Jakarta Sans',sans-serif" },
+    planBtn: { display: 'flex', alignItems: 'center', gap: 8, background: '#EBF2FF', border: '0.5px solid #BFDBFE', borderRadius: 12, padding: '12px 16px', fontSize: 13, fontWeight: 600, color: '#1A56DB', cursor: 'pointer', margin: '12px 16px 0', width: 'calc(100% - 32px)', justifyContent: 'center', fontFamily: "'Inter',sans-serif" },
     planCard: { margin: '12px 16px 0', background: '#fff', border: '0.5px solid #EAECF0', borderRadius: 14, padding: 16 },
     planTitle: { fontSize: 11, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 },
     planSlot: { fontSize: 20, fontWeight: 700, color: '#1A56DB', marginBottom: 4 },
@@ -429,11 +463,11 @@ const s: Record<string, React.CSSProperties> = {
     planAlt: { fontSize: 12, color: '#6B7280', marginBottom: 6 },
     planSub: { fontSize: 12, color: '#6B7280', marginBottom: 8 },
     planTip: { fontSize: 12, color: '#059669', marginBottom: 10, fontStyle: 'italic' },
-    replanBtn: { fontSize: 12, color: '#1A56DB', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'Plus Jakarta Sans',sans-serif", padding: 0 },
+    replanBtn: { fontSize: 12, color: '#1A56DB', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'Inter',sans-serif", padding: 0 },
     checkinWrap: { padding: '16px 16px 0' },
-    checkinBtn: { width: '100%', background: '#1A56DB', color: '#fff', border: 'none', borderRadius: 14, padding: 16, fontSize: 15, fontWeight: 600, fontFamily: "'Plus Jakarta Sans',sans-serif", cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 },
+    checkinBtn: { width: '100%', background: '#1A56DB', color: '#fff', border: 'none', borderRadius: 14, padding: 16, fontSize: 15, fontWeight: 600, fontFamily: "'Inter',sans-serif", cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 },
     checkinDone: { background: '#059669' },
-    checkoutBtn: { width: '100%', background: 'transparent', border: '0.5px solid #E5E7EB', borderRadius: 14, padding: 12, fontSize: 13, color: '#6B7280', fontFamily: "'Plus Jakarta Sans',sans-serif", cursor: 'pointer', marginTop: 8 },
+    checkoutBtn: { width: '100%', background: 'transparent', border: '0.5px solid #E5E7EB', borderRadius: 14, padding: 12, fontSize: 13, color: '#6B7280', fontFamily: "'Inter',sans-serif", cursor: 'pointer', marginTop: 8 },
     enRouteRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#EBF2FF', borderRadius: 12, padding: '12px 14px', marginTop: 10 },
     erTitle: { fontSize: 13, fontWeight: 600, color: '#1A56DB' },
     erSub: { fontSize: 11, color: '#6B7280', marginTop: 2 },
@@ -441,7 +475,8 @@ const s: Record<string, React.CSSProperties> = {
     toggleOn: { background: '#1A56DB' },
     toggleThumb: { position: 'absolute', top: 2, left: 2, width: 20, height: 20, background: '#fff', borderRadius: '50%', transition: 'all 0.2s' },
     thumbOn: { left: 22 },
-    anonNote: { textAlign: 'center', fontSize: 11, color: '#9CA3AF', marginTop: 8 },
+    anonNote: { textAlign: 'center', fontSize: 11, color: '#6B7280', marginTop: 8, marginBottom: 6 },
+    checkinError: { background: '#FEE2E2', border: '0.5px solid #FECACA', borderRadius: 10, padding: '10px 14px', fontSize: 12, color: '#B91C1C', textAlign: 'center', marginTop: 8 },
     modalOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 200 },
     modal: { background: '#fff', borderRadius: '20px 20px 0 0', padding: '24px 20px 36px', width: '100%', maxWidth: 390 },
     modalTitle: { fontSize: 17, fontWeight: 700, color: '#111827', marginBottom: 4 },
@@ -449,12 +484,12 @@ const s: Record<string, React.CSSProperties> = {
     modalRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
     modalLabel: { fontSize: 14, color: '#374151' },
     modalCounter: { display: 'flex', alignItems: 'center', gap: 12 },
-    counterBtn: { width: 32, height: 32, borderRadius: 8, border: '0.5px solid #E5E7EB', background: '#F4F6FB', fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Plus Jakarta Sans',sans-serif" },
+    counterBtn: { width: 32, height: 32, borderRadius: 8, border: '0.5px solid #E5E7EB', background: '#F4F6FB', fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Inter',sans-serif" },
     counterVal: { fontSize: 18, fontWeight: 700, color: '#111827', minWidth: 24, textAlign: 'center' },
     modalNote: { fontSize: 11, color: '#9CA3AF', marginBottom: 20, background: '#F4F6FB', padding: '8px 12px', borderRadius: 8 },
-    modalConfirm: { width: '100%', background: '#1A56DB', color: '#fff', border: 'none', borderRadius: 12, padding: 14, fontSize: 15, fontWeight: 600, fontFamily: "'Plus Jakarta Sans',sans-serif", cursor: 'pointer', marginBottom: 8 },
-    modalCancel: { width: '100%', background: 'transparent', border: 'none', color: '#6B7280', fontSize: 14, fontFamily: "'Plus Jakarta Sans',sans-serif", cursor: 'pointer', padding: 8 },
+    modalConfirm: { width: '100%', background: '#1A56DB', color: '#fff', border: 'none', borderRadius: 12, padding: 14, fontSize: 15, fontWeight: 600, fontFamily: "'Inter',sans-serif", cursor: 'pointer', marginBottom: 8 },
+    modalCancel: { width: '100%', background: 'transparent', border: 'none', color: '#6B7280', fontSize: 14, fontFamily: "'Inter',sans-serif", cursor: 'pointer', padding: 8 },
     slotsGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 20 },
-    slotBtn: { background: '#F4F6FB', border: '0.5px solid #EAECF0', borderRadius: 8, padding: '8px 4px', fontSize: 11, color: '#374151', cursor: 'pointer', fontFamily: "'Plus Jakarta Sans',sans-serif", textAlign: 'center' },
+    slotBtn: { background: '#F4F6FB', border: '0.5px solid #EAECF0', borderRadius: 8, padding: '8px 4px', fontSize: 11, color: '#374151', cursor: 'pointer', fontFamily: "'Inter',sans-serif", textAlign: 'center' },
     slotBtnActive: { background: '#EBF2FF', borderColor: '#1A56DB', color: '#1A56DB', fontWeight: 600 },
 };

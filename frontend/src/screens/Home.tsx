@@ -104,8 +104,8 @@ const NavIcon = ({ name, active }: NavIconProps): ReactElement => {
     return (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
             stroke={color} strokeWidth="2" strokeLinecap="round">
-            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-            <circle cx="12" cy="7" r="4" />
+            <circle cx="12" cy="12" r="3" />
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
         </svg>
     );
 };
@@ -199,9 +199,12 @@ export default function Home({ onSelect }: Props): ReactElement {
             .finally(() => setLoading(false));
     };
 
+    const [searchError, setSearchError] = useState<string | null>(null);
+
     const handleSearch = async (city: string): Promise<void> => {
         if (!city.trim()) return;
         setLoading(true);
+        setSearchError(null);
         try {
             // Nominatim se city ke coordinates lo - free
             const res = await fetch(
@@ -218,7 +221,7 @@ export default function Home({ onSelect }: Props): ReactElement {
                 setCitySearched(true);
             }
         } catch (err) {
-            console.error(err);
+            setSearchError('Could not search. Please check your connection and try again.');
         } finally {
             setLoading(false);
         }
@@ -357,7 +360,12 @@ export default function Home({ onSelect }: Props): ReactElement {
                                     </button>
                                 ))}
                             </div>
-                            <button
+                            {searchError && (
+                                <div style={{ background: '#FEE2E2', borderRadius: 10, padding: '10px 14px', fontSize: 12, color: '#B91C1C', marginBottom: 12, textAlign: 'center' }}>
+                                    {searchError}
+                                </div>
+                            )}
+                        <button
                                 style={s.cityModalCancel}
                                 onClick={() => setShowCitySearch(false)}>
                                 Cancel
@@ -421,7 +429,7 @@ export default function Home({ onSelect }: Props): ReactElement {
 
             {/* Bottom Nav */}
             <div style={s.bottomNav}>
-                {(['Home', 'Search', 'Alerts', 'Profile'] as const).map((item, i) => (
+                {(['Home', 'Search', 'Alerts', 'Settings'] as const).map((item, i) => (
                     <div key={item} style={s.navItem}>
                         <NavIcon name={item} active={i === 0} />
                         <span style={{ ...s.navLabel, ...(i === 0 ? { color: '#1A56DB' } : {}) }}>
@@ -443,13 +451,13 @@ const s: Record<string, React.CSSProperties> = {
     lname: { fontSize: 17, fontWeight: 700, color: '#111827' },
     notifBtn: { width: 34, height: 34, background: '#F4F6FB', borderRadius: 10, border: '0.5px solid #EAECF0', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' },
     searchBar: { display: 'flex', alignItems: 'center', gap: 10, background: '#F4F6FB', border: '0.5px solid #EAECF0', borderRadius: 12, padding: '10px 14px' },
-    searchInput: { border: 'none', background: 'transparent', fontSize: 14, fontFamily: "'Plus Jakarta Sans',sans-serif", color: '#374151', flex: 1, outline: 'none' },
+    searchInput: { border: 'none', background: 'transparent', fontSize: 14, fontFamily: "'Inter',sans-serif", color: '#374151', flex: 1, outline: 'none' },
     searchIcon: { width: 32, height: 32, background: '#1A56DB', borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, cursor: 'pointer' },
     spinner: { width: 14, height: 14, border: '2px solid rgba(255,255,255,0.3)', borderTop: '2px solid white', borderRadius: '50%', animation: 'spin 0.8s linear infinite' },
     searchHint: { fontSize: 11, color: '#9CA3AF', marginTop: 6, paddingLeft: 4 },
     body: { flex: 1, overflowY: 'auto', padding: '16px 20px 90px' },
     pills: { display: 'flex', gap: 8, marginBottom: 20, overflowX: 'auto', paddingBottom: 4 },
-    pill: { flexShrink: 0, background: '#fff', border: '0.5px solid #EAECF0', borderRadius: 20, padding: '8px 14px', cursor: 'pointer', fontFamily: "'Plus Jakarta Sans',sans-serif" },
+    pill: { flexShrink: 0, background: '#fff', border: '0.5px solid #EAECF0', borderRadius: 20, padding: '8px 14px', cursor: 'pointer', fontFamily: "'Inter',sans-serif" },
     pillActive: { background: '#EBF2FF', borderColor: '#1A56DB' },
     pillLabel: { fontSize: 12, fontWeight: 500, color: '#374151' },
     sectionHead: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
@@ -479,15 +487,15 @@ const s: Record<string, React.CSSProperties> = {
     cityModalTitle: { fontSize: 17, fontWeight: 700, color: '#111827', marginBottom: 4 },
     cityModalSub: { fontSize: 13, color: '#6B7280', marginBottom: 16 },
     cityInputRow: { display: 'flex', gap: 8, marginBottom: 16 },
-    cityInput: { flex: 1, border: '0.5px solid #EAECF0', borderRadius: 10, padding: '10px 14px', fontSize: 14, fontFamily: "'Plus Jakarta Sans',sans-serif", outline: 'none' },
-    citySearchBtn: { background: '#1A56DB', color: '#fff', border: 'none', borderRadius: 10, padding: '10px 16px', fontSize: 13, fontWeight: 600, fontFamily: "'Plus Jakarta Sans',sans-serif", cursor: 'pointer' },
+    cityInput: { flex: 1, border: '0.5px solid #EAECF0', borderRadius: 10, padding: '10px 14px', fontSize: 14, fontFamily: "'Inter',sans-serif", outline: 'none' },
+    citySearchBtn: { background: '#1A56DB', color: '#fff', border: 'none', borderRadius: 10, padding: '10px 16px', fontSize: 13, fontWeight: 600, fontFamily: "'Inter',sans-serif", cursor: 'pointer' },
     quickCities: { display: 'flex', gap: 8, flexWrap: 'wrap' as const, marginBottom: 16 },
-    quickCityBtn: { background: '#F4F6FB', border: '0.5px solid #EAECF0', borderRadius: 20, padding: '6px 14px', fontSize: 12, color: '#374151', cursor: 'pointer', fontFamily: "'Plus Jakarta Sans',sans-serif" },
-    cityModalCancel: { width: '100%', background: 'transparent', border: 'none', color: '#6B7280', fontSize: 14, fontFamily: "'Plus Jakarta Sans',sans-serif", cursor: 'pointer', padding: 8 },
+    quickCityBtn: { background: '#F4F6FB', border: '0.5px solid #EAECF0', borderRadius: 20, padding: '6px 14px', fontSize: 12, color: '#374151', cursor: 'pointer', fontFamily: "'Inter',sans-serif" },
+    cityModalCancel: { width: '100%', background: 'transparent', border: 'none', color: '#6B7280', fontSize: 14, fontFamily: "'Inter',sans-serif", cursor: 'pointer', padding: 8 },
     locationPrompt: { display: 'flex', flexDirection: 'column' as const, alignItems: 'center', justifyContent: 'center', minHeight: '100vh', padding: '0 32px', background: '#fff', gap: 16 },
     lpIcon: { width: 80, height: 80, background: '#EBF2FF', borderRadius: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
     lpTitle: { fontSize: 22, fontWeight: 700, color: '#111827', textAlign: 'center' as const },
     lpSub: { fontSize: 14, color: '#6B7280', textAlign: 'center' as const, lineHeight: 1.6 },
-    lpAllow: { width: '100%', background: '#1A56DB', color: '#fff', border: 'none', borderRadius: 14, padding: 16, fontSize: 15, fontWeight: 600, fontFamily: "'Plus Jakarta Sans',sans-serif", cursor: 'pointer', marginTop: 8 },
-    lpDeny: { width: '100%', background: 'transparent', border: '0.5px solid #EAECF0', borderRadius: 14, padding: 14, fontSize: 14, color: '#6B7280', fontFamily: "'Plus Jakarta Sans',sans-serif", cursor: 'pointer' },
+    lpAllow: { width: '100%', background: '#1A56DB', color: '#fff', border: 'none', borderRadius: 14, padding: 16, fontSize: 15, fontWeight: 600, fontFamily: "'Inter',sans-serif", cursor: 'pointer', marginTop: 8 },
+    lpDeny: { width: '100%', background: 'transparent', border: '0.5px solid #EAECF0', borderRadius: 14, padding: 14, fontSize: 14, color: '#6B7280', fontFamily: "'Inter',sans-serif", cursor: 'pointer' },
 };
