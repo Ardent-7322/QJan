@@ -1,0 +1,186 @@
+QJan - Complete Improvement Checklist
+======================================
+Anonymous-first. No accounts. No login required.
+======================================
+
+
+FRONTEND
+--------
+
+HOME SCREEN
+- "Location unavailable" banner is too small and passive. Make it the first prominent interaction since the whole app depends on location.
+- Add a manual city entry fallback that is always visible, not hidden behind a small "Change" link.
+- Category filter tabs (RTO, Passport, Hospital, Post Office) are cut off on the right. Use a horizontally scrollable pill row with visible overflow hint.
+- "High Footfall Today" and "Quiet Right Now" sections need a last-updated timestamp so users know the data is fresh.
+- Each office card should show how many people contributed data in the last 30 minutes. This builds trust.
+- If there is zero data for any office, show a "No recent data" state instead of stale or empty numbers.
+- Add a data confidence indicator (e.g., Low / Medium / High) on each card based on recent check-in count.
+- The notification bell icon has no state. Show a dot or badge when there is an active alert.
+
+OFFICE DETAIL SCREEN
+- The giant queue count number dominates but it is not the most useful thing. Give equal or more visual weight to the anomaly warning and best time recommendation.
+- "Queue is much higher than usual for this time" warning is a dead end. Immediately below it, show the next recommended time slot or a nearby quieter office.
+- "Estimated wait: ~74 mins" needs a basis shown. Something like "based on 4.5 min avg per person" so it does not feel made up.
+- Best time card shows "Avg only 5 people" but gives no indication of how confident this is. Add "based on X past visits" so users can judge reliability.
+- "Thursday 2pm" recommendation needs the same confidence label.
+- "Carry all documents to avoid multiple visits" tip is generic. Make this specific to the office type (RTO vs Hospital vs Post Office have different document requirements).
+- The "I'm joining the queue" button label is misleading. It implies virtual queueing and holding a position. Rename it to something like "Check in anonymously" or "I'm here now" to accurately reflect that it is a crowd-sourced data contribution.
+- Add a brief one-line explanation near the check-in button: e.g., "Your check-in helps others see real-time queue data. No account needed."
+- "Anonymous · No account · No data stored" footer text is too small and at the bottom. Move this trust statement near the check-in button where it matters most.
+- "Plan my visit" and "Change slots" are two separate entry points that do the same thing. Consolidate into one.
+
+SLOT PICKER MODAL ("When are you free?")
+- "AI picks the best one" label overpromises. If the logic is pattern matching on historical data, call it "We find the quietest slot for you" instead.
+- Selected slots have no visible deselect affordance. Make it clear a selected slot can be tapped again to deselect.
+- "Find Best Time" button should be disabled until at least one slot is selected, with a visible reason why.
+- After the user picks a time, show them what to expect at that slot (estimated queue, historical avg) before they commit.
+
+SEARCH MODAL
+- Quick-select city chips (Delhi, Mumbai, etc.) are hardcoded. These should reflect recently searched or popular cities based on actual usage.
+- The search input has no loading or empty state. Show a spinner while searching and a clear "No offices found in [city]" state when results are empty.
+- After searching a city, the modal should transition to filtered results rather than just closing. Currently unclear what happens after hitting Search.
+
+GENERAL UI
+- Font sizes for secondary information (location names, "in queue" labels) are too small on mobile viewports.
+- Status badges (Moderate, Busy, Quiet) need accessible color contrast. Green/orange/red alone is not sufficient for color-blind users. Add an icon or pattern alongside the color.
+- No empty state design for when a category filter (e.g., RTO tab) returns zero offices nearby.
+- No error state design for when the API call fails. App should show a friendly message and a retry option.
+- No pull-to-refresh on the home screen. Users have no way to manually trigger a data refresh.
+- The bottom navigation bar (Home, Search, Alerts, Profile) has a Profile tab. Since this is anonymous, Profile should be removed or replaced with Settings.
+- Alerts tab in bottom nav should show a badge count when active alerts exist.
+
+
+BACKEND
+-------
+
+QUEUE DATA RELIABILITY
+- There is no validation on anonymous check-ins. Anyone can spam check-ins and inflate or deflate numbers. Add a simple rate limit per IP or device fingerprint (no account needed, just a browser-generated anonymous session ID stored in localStorage).
+- Check-in contributions should expire. A check-in from 3 hours ago should not count toward "current" queue. Implement a rolling time window (e.g., last 20-30 minutes) for live count calculation.
+- The wait time formula (People x Avg Service Time x 1.1) uses a fixed 1.1 buffer regardless of office type or time of day. This buffer should be configurable per office type and should grow when queue is unusually high.
+- Average service time per person (4.5 min) appears hardcoded. This should be derived from actual check-in and check-out time deltas per office, updated dynamically.
+
+ANOMALY DETECTION
+- Currently appears to be a simple threshold comparison. This should be converted into a proper statistical check: compare current count against rolling average for the same hour and day of week, flagged only when deviation exceeds a meaningful threshold (e.g., 2 standard deviations).
+- Anomaly detection should also flag unusually quiet periods, not just crowds. A queue that is much shorter than expected can be just as informative (e.g., office may be closed or have reduced staff).
+
+BEST TIME LOGIC
+- Current logic finds the historically lowest hour for the same day of week. This is reasonable but should handle edge cases: what if there is not enough data for that day of week yet? Fall back to overall daily pattern and label it accordingly.
+- Best time recommendation should account for the user's current time. Do not suggest a past time slot for today.
+- The recommendation should show how many historical data points it is based on, so the frontend can show confidence levels.
+
+AI FEATURES (GROQ - LLAMA 3.1 8B)
+- AI Search: If a user types something vague like "renew license" the AI should return a ranked list of matching offices, not just one. Currently unclear if multiple results are supported.
+- AI Visit Planner: The model receives user's free slots and presumably picks the best one. The prompt needs to explicitly instruct the model to explain its reasoning in one line so the frontend can display it.
+- All AI responses should have a fallback if the Groq API is down or rate-limited. The app should degrade gracefully to rule-based suggestions rather than showing an error.
+- Add response caching for AI Search queries. Common queries like "passport" or "driving license" should not hit the API every time.
+
+API DESIGN
+- The single environment variable REACT_APP_API_URL pointing to /api/queue suggests there may be only one endpoint. The API should have separate endpoints: one for fetching queue status, one for submitting a check-in, one for best time suggestions, one for AI search.
+- Add rate limiting on all POST endpoints (check-ins, AI queries) to prevent abuse.
+- API responses should include a data_freshness field indicating how recent the underlying data is, so the frontend can show it to users.
+- All endpoints should return a consistent error response shape so the frontend can handle errors uniformly.
+- CORS settings should be locked down to known frontend origins before any public deployment.
+
+NOTIFICATIONS
+- Browser Notification API requires an open tab. Document this limitation more prominently in the UI, not just in the README.
+- Surge alert logic needs clearer triggering rules. What threshold triggers a "queue spiked" alert vs a "queue dropped" alert? These should be configurable per office and documented.
+- Currently using localStorage for notification preferences. This is fine for anonymous use but should be clearly noted as device-specific (clearing browser data loses alert subscriptions).
+
+DATA LAYER (FIREBASE FIRESTORE)
+- Define clear Firestore security rules. Without them, the database is open for read/write to anyone.
+- Structure check-in documents to support automatic expiry. Use a timestamp field and schedule a Cloud Function or backend job to clean up stale check-ins periodically.
+- Index queries on office ID + timestamp for the rolling time window calculations. Without indexes, Firestore queries will be slow and expensive.
+- If an office has no check-ins in the last 24 hours, mark it as "No recent data" in the API response rather than showing a stale number.
+
+
+PRODUCT / EXPERIENCE
+--------------------
+
+- There is no onboarding for new users. First-time visitors do not know what QJan is, how data is collected, or why they should trust the numbers. Add a single dismissible banner or tooltip that explains the crowdsourced model in one sentence.
+- There is no way for a user to know if an office is currently open or closed. Adding basic operating hours per office would prevent users from planning a visit to a closed office.
+- The app has no mechanism for users to flag bad data (e.g., "this queue count seems wrong"). A simple thumbs down or "report inaccurate" option would help with data quality without requiring accounts.
+- No distinction between walk-in queues and appointment-based offices (e.g., Passport Seva). The UX and queue logic should differ for these two cases.
+- The README lists "AI Anomaly Detector" and "AI Visit Planner" as features but the actual AI involvement is minimal. Align the feature names with what the product actually does to avoid overpromising.
+
+
+TYPOGRAPHY
+----------
+
+FONT CHOICE: Inter (Google Fonts)
+- Use Inter as the single font family across the entire project, frontend only. No mixing with any other typeface.
+- Inter is purpose-built for UI and data-dense screens. It reads cleanly at small sizes, which matters for secondary labels like location names and "in queue" text.
+- Critically for QJan: use Inter's tabular number feature (font-variant-numeric: tabular-nums) on all queue counts and wait time numbers. This prevents the digits from jumping in width as the number updates every 10 seconds, which looks broken without it.
+- Weight scale to use consistently:
+    400 (Regular)  — body text, secondary labels, descriptions
+    500 (Medium)   — card titles, office names, modal headings
+    600 (SemiBold) — section headers, badge text, button labels
+    700 (Bold)     — the live queue count number, key stats like wait time
+- Never go below 400. Never use 300 or lighter weights in a utility app — they are illegible in outdoor or bright screen conditions where users check this app.
+- Remove any system font fallbacks from the primary UI once Inter is loaded. Stack should be: 'Inter', sans-serif.
+- Load only the weights you use (400, 500, 600, 700) via Google Fonts to keep load time low.
+
+
+WAIT TIME CALCULATION: REPLACE WITH QUEUING THEORY
+---------------------------------------------------
+
+Current formula (remove this):
+    Wait Time = People in Queue x Avg Service Time x 1.1
+
+This is wrong. It assumes the queue is static and ignores arrival rate entirely. When arrivals approach service capacity, wait time does not grow linearly — it grows toward infinity. The 1.1 buffer hides this reality and will show dangerously low estimates during peak hours.
+
+Replace with M/M/1 or M/M/c queuing theory depending on the office.
+
+--- M/M/1 (single counter offices like a small post office) ---
+
+    W = 1 / (mu - lambda)
+
+    lambda = arrival rate (people per minute arriving, derived from check-in timestamps)
+    mu     = service rate (people per minute being served = 1 / avg_service_time)
+    W      = expected wait time in the system (queue wait + service time)
+
+Condition: lambda must be less than mu. If lambda >= mu the queue is unstable and growing.
+In this case do not calculate a wait time — instead show "Queue is growing, no reliable estimate."
+
+--- M/M/c (multi-counter offices like RTO, hospital OPD) ---
+
+Use the Erlang C formula to account for c parallel service counters.
+
+    rho    = lambda / (c * mu)          [server utilisation, must be < 1]
+    C(c,a) = Erlang C probability       [probability a customer has to wait]
+
+    Wq = C(c,a) / (c * mu - lambda)     [expected wait in queue only]
+    W  = Wq + (1 / mu)                  [total time including service]
+
+    where a = lambda / mu (total offered load)
+
+Erlang C can be computed iteratively or looked up. Use a standard implementation.
+Number of counters (c) should be stored per office in Firestore and editable.
+
+--- What you need to track per office ---
+
+    lambda        : compute from check-in timestamps — count check-ins in last 10 minutes, divide by 10
+    mu            : 1 / avg_service_time_minutes. Start with 1/4.5 = 0.222/min, update dynamically from check-in/check-out deltas
+    c             : number of active service counters. Hardcode initially per office, make it updatable.
+    current_queue : number of people currently in queue from rolling 20-30 min check-in window
+
+--- Anomaly trigger from queuing theory ---
+
+When lambda / (c * mu) exceeds 0.85 (85% utilisation), the queue enters unstable growth.
+This is the mathematically correct trigger for the anomaly alert — not an arbitrary threshold.
+Show: "Queue is near capacity. Wait times will rise sharply."
+
+When lambda / (c * mu) drops below 0.2 (unusually quiet), flag it too.
+Show: "Much quieter than usual. Good time to visit."
+
+--- Display to users ---
+
+- Show the calculated W value as the estimated wait. Round to nearest 5 minutes.
+- Below the wait time, show the utilisation percentage: e.g., "Office is 73% busy right now."
+- If lambda >= mu (unstable queue), show "Estimate unavailable — queue is growing" instead of a number.
+- The confidence of the estimate should scale with how many check-ins lambda is derived from.
+  If fewer than 3 check-ins in the last 10 minutes, label the estimate as low confidence.
+
+
+======================================
+End of checklist
+======================================
