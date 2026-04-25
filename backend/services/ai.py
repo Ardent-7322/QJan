@@ -20,19 +20,25 @@ def clean_json(text: str) -> str:
     return text
 
 def ask_groq(prompt: str) -> str:
-    response = client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.3,
-    )
-    return response.choices[0].message.content.strip()
+    try:
+        response = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.3,
+        )
+        return response.choices[0].message.content.strip()
+    except Exception as e:
+        raise RuntimeError(f"AI service unavailable: {str(e)}")
 
 # ─────────────────────────────────────────
 # FEATURE A — Natural Language Search
 # ─────────────────────────────────────────
 
 async def natural_search(query: str) -> dict:
-    offices = get_all_offices()
+    try:
+        offices = get_all_offices()
+    except Exception:
+        return {"matched_office_id": None, "reason": "Service temporarily unavailable", "confidence": "low"}
     offices_text = "\n".join([
         f"- ID: {o['office_id']} | Name: {o['name']} | "
         f"Type: {o['type']} | City: {o['city']} | "
@@ -92,6 +98,15 @@ async def explain_anomaly(office_id: str) -> dict:
     if today in history:
         historical_avg = history[today][hour_index]
 
+    # Find quieter slots from history for suggestion
+    quieter_slots = []
+    if today in history:
+        slot_names = ["9am", "10am", "11am", "12pm", "2pm", "3pm"]
+        for i, count in enumerate(history[today]):
+            if count < historical_avg * 0.6 and i < len(slot_names):
+                quieter_slots.append(f"{slot_names[i]} (~{count} people)")
+    quieter_text = ", ".join(quieter_slots[:2]) if quieter_slots else "2pm or 3pm"
+
     prompt = f"""
 You are an AI assistant for QJan — a government office queue predictor in India.
 
@@ -99,15 +114,17 @@ Office: {data['name']}
 Current queue count: {current} people
 Current time slot: {current_slot}
 Historical average for this slot on {today}: {historical_avg} people
+Historically quieter slots today: {quieter_text}
 
 Analyze if this is an anomaly and explain in simple friendly English.
+If it IS an anomaly, the suggestion MUST recommend a specific quieter time slot from the data above.
 
 Return ONLY a raw JSON object like this:
 {{
   "anomaly": true,
   "severity": "high",
   "message": "Queue is much higher than usual for this time.",
-  "suggestion": "Try visiting after 2pm when it usually gets quieter."
+  "suggestion": "Try visiting at 2pm — historically only 5 people at that time."
 }}
 
 Return ONLY raw JSON. No markdown. No backticks. No explanation.

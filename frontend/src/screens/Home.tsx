@@ -122,6 +122,8 @@ const OfficeCard = ({ office, onSelect }: OfficeCardProps): ReactElement => {
     const bg = BG[office.type as OfficeType] || '#EBF2FF';
     const color = COLOR[office.type as OfficeType] || '#1A56DB';
 
+    const hasData = office.current_count > 0 || office.status !== 'quiet';
+
     return (
         <div style={s.card} onClick={() => onSelect(office)}>
             <div style={{ ...s.cardIcon, background: bg }}>
@@ -129,18 +131,22 @@ const OfficeCard = ({ office, onSelect }: OfficeCardProps): ReactElement => {
             </div>
             <div style={s.cardInfo}>
                 <div style={s.cardName}>{office.name}</div>
-                <div style={s.cardMeta}>{office.city}</div>
+                <div style={s.cardMeta}>{office.area || office.city}
+                    {office.distance_km !== undefined && (
+                        <span style={s.distBadge}> · {office.distance_km} km</span>
+                    )}
+                </div>
             </div>
             <div style={s.cardRight}>
-                <span style={{ ...s.statusPill, ...STATUS_STYLE[statusKey] }}>
-                    {statusLabel}
-                </span>
-                <span style={s.cardCount}>{office.current_count} in queue</span>
-            </div>
-            <div style={s.cardMeta}>
-                {office.area || office.city}
-                {office.distance_km !== undefined && (
-                    <span style={s.distBadge}> · {office.distance_km} km</span>
+                {hasData ? (
+                    <>
+                        <span style={{ ...s.statusPill, ...STATUS_STYLE[statusKey] }}>
+                            {statusLabel}
+                        </span>
+                        <span style={s.cardCount}>{office.current_count} in queue</span>
+                    </>
+                ) : (
+                    <span style={s.noDataPill}>No recent data</span>
                 )}
             </div>
         </div>
@@ -400,6 +406,24 @@ export default function Home({ onSelect }: Props): ReactElement {
                     </div>
                 )}
 
+                {/* Empty state when no offices match filter */}
+                {!loading && filtered.length === 0 && (
+                    <div style={s.emptyState}>
+                        <div style={s.emptyIcon}>🏛️</div>
+                        <div style={s.emptyTitle}>No offices found</div>
+                        <div style={s.emptyText}>
+                            {filter !== 'All'
+                                ? `No ${filter} offices nearby. Try a different category.`
+                                : 'No offices found in this area. Try searching a different city.'}
+                        </div>
+                        {filter !== 'All' && (
+                            <button style={s.emptyBtn} onClick={() => setFilter('All')}>
+                                Show all offices
+                            </button>
+                        )}
+                    </div>
+                )}
+
                 {/* High Footfall */}
                 {busy.length > 0 && (
                     <>
@@ -492,6 +516,12 @@ const s: Record<string, React.CSSProperties> = {
     quickCities: { display: 'flex', gap: 8, flexWrap: 'wrap' as const, marginBottom: 16 },
     quickCityBtn: { background: '#F4F6FB', border: '0.5px solid #EAECF0', borderRadius: 20, padding: '6px 14px', fontSize: 12, color: '#374151', cursor: 'pointer', fontFamily: "'Inter',sans-serif" },
     cityModalCancel: { width: '100%', background: 'transparent', border: 'none', color: '#6B7280', fontSize: 14, fontFamily: "'Inter',sans-serif", cursor: 'pointer', padding: 8 },
+    noDataPill: { fontSize: 11, fontWeight: 500, padding: '3px 10px', borderRadius: 20, background: '#F4F6FB', color: '#9CA3AF', border: '0.5px solid #E5E7EB' },
+    emptyState: { display: 'flex', flexDirection: 'column' as const, alignItems: 'center', justifyContent: 'center', padding: '48px 24px', textAlign: 'center' as const },
+    emptyIcon: { fontSize: 40, marginBottom: 16 },
+    emptyTitle: { fontSize: 16, fontWeight: 600, color: '#111827', marginBottom: 8 },
+    emptyText: { fontSize: 13, color: '#6B7280', lineHeight: 1.6, marginBottom: 16 },
+    emptyBtn: { background: '#EBF2FF', border: '0.5px solid #BFDBFE', borderRadius: 10, padding: '10px 20px', fontSize: 13, fontWeight: 600, color: '#1A56DB', cursor: 'pointer', fontFamily: "'Inter',sans-serif" },
     locationPrompt: { display: 'flex', flexDirection: 'column' as const, alignItems: 'center', justifyContent: 'center', minHeight: '100vh', padding: '0 32px', background: '#fff', gap: 16 },
     lpIcon: { width: 80, height: 80, background: '#EBF2FF', borderRadius: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
     lpTitle: { fontSize: 22, fontWeight: 700, color: '#111827', textAlign: 'center' as const },

@@ -17,6 +17,35 @@ const SLOT_OPTIONS: string[] = [
     'Friday 9am', 'Friday 11am', 'Friday 2pm',
 ];
 
+// Office-type specific document tips
+const OFFICE_TIPS: Record<string, string[]> = {
+    'RTO': [
+        'Carry original RC, insurance, and pollution certificate.',
+        'DL renewal needs old DL + address proof + medical form.',
+        'Vehicle transfer needs Form 29 & 30, original RC, insurance.',
+    ],
+    'Passport': [
+        'Carry original Aadhaar + 2 self-attested copies.',
+        'Address proof, DOB proof, and old passport if renewing.',
+        'Original documents only — photocopies alone are rejected.',
+    ],
+    'Hospital': [
+        'Carry previous prescriptions and test reports.',
+        'OPD registration card speeds up the process.',
+        'Arrive 15 mins early for OPD token registration.',
+    ],
+    'Post Office': [
+        'Carry valid ID proof for money orders and registered post.',
+        'Speed Post: pack and seal the parcel before arriving.',
+        'Savings account work needs passbook + Aadhaar.',
+    ],
+};
+
+function getOfficeTip(type: string): string {
+    const tips = OFFICE_TIPS[type] || ['Carry all relevant documents to avoid multiple visits.'];
+    return tips[new Date().getDay() % tips.length];
+}
+
 interface Props {
     office: Office;
     onBack: () => void;
@@ -52,9 +81,8 @@ export default function Dashboard({ office, onBack }: Props): ReactElement {
             })
             .finally(() => setLoading(false));
 
-        getAnomaly(office.office_id)
-            .then(setAnomaly)
-            .catch(console.error);
+        // Anomaly is now included in queue data response (data.anomaly)
+        // Keeping getAnomaly as fallback for backward compat
 
         const interval = setInterval(() => {
             getOfficeQueue(office.office_id).then(setData);
@@ -193,8 +221,13 @@ export default function Dashboard({ office, onBack }: Props): ReactElement {
                                 <circle cx="12" cy="12" r="10" />
                                 <polyline points="12 6 12 12 16 14" />
                             </svg>
-                            Estimated wait: ~{data.estimated_wait_mins} mins
+                            {data.estimated_wait_display || `~${data.estimated_wait_mins} mins`}
                         </div>
+                        {data.utilisation !== null && data.utilisation !== undefined && (
+                            <div style={s.utilisationChip}>
+                                Office is {Math.round(data.utilisation * 100)}% busy
+                            </div>
+                        )}
                     </div>
                     <div style={s.miniStats}>
                         <div style={s.miniStat}>
@@ -209,23 +242,20 @@ export default function Dashboard({ office, onBack }: Props): ReactElement {
                     </div>
                 </div>
 
-                {/* Feature B — Anomaly Card */}
-                {anomaly && anomaly.anomaly && (
+                {/* Anomaly Card — with actionable next-slot suggestion */}
+                {data.anomaly && data.anomaly.anomaly ? (
                     <div style={{
                         ...s.anomalyCard,
-                        ...(anomaly.severity === 'high' ? s.anomalyHigh : s.anomalyMed)
+                        ...(data.anomaly.severity === 'high' ? s.anomalyHigh : s.anomalyMed)
                     }}>
-                        <span style={s.anomalyTitle}>⚠ {anomaly.message}</span>
+                        <div style={s.anomalyTitle}>⚠ {data.anomaly.message}</div>
+                        {data.best_time_today && (
+                            <div style={s.anomalySuggestion}>
+                                💡 Try visiting at <strong>{data.best_time_today.time}</strong> — avg only {data.best_time_today.expected_count} people expected.
+                            </div>
+                        )}
                     </div>
-                )}
-
-                {anomaly && !anomaly.anomaly && (
-                    <div style={s.allClearCard}>
-                        <span style={s.allClearText}>✓ Normal queue for this time</span>
-                    </div>
-                )}
-
-                {anomaly && !anomaly.anomaly && (
+                ) : (
                     <div style={s.allClearCard}>
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
                             stroke="#065F46" strokeWidth="2.5" strokeLinecap="round">
@@ -250,7 +280,13 @@ export default function Dashboard({ office, onBack }: Props): ReactElement {
                         <div style={s.btVal}>{data.best_time_today?.time}</div>
                         <div style={s.btSub}>
                             Avg only {data.best_time_today?.expected_count} people
+                            {data.best_time_today?.confidence === 'low' && (
+                                <span style={s.lowConfidence}> · Low confidence</span>
+                            )}
                         </div>
+                        {data.best_time_today?.note && (
+                            <div style={s.btNote}>{data.best_time_today.note}</div>
+                        )}
                     </div>
                 </div>
                 {/* Mini Stats */}
@@ -275,7 +311,7 @@ export default function Dashboard({ office, onBack }: Props): ReactElement {
                         <div style={s.planTitle}>Best time to visit</div>
                         <div style={s.planSlot}>{plan.recommended_slot}</div>
                         <div style={s.planSub}>~{plan.expected_count} people expected</div>
-                        <div style={s.planTip}>{plan.tip}</div>
+                        <div style={s.planTip}>{plan.tip || getOfficeTip(data.type)}</div>
                         <button style={s.replanBtn}
                             onClick={() => { setPlan(null); setShowPlanner(true); }}>
                             Change slots
@@ -295,6 +331,12 @@ export default function Dashboard({ office, onBack }: Props): ReactElement {
                 )}
 
                 {/* Checkin */}
+                {/* Office-type specific document tip */}
+                <div style={s.tipCard}>
+                    <span style={s.tipIcon}>📋</span>
+                    <span style={s.tipText}>{getOfficeTip(data.type)}</span>
+                </div>
+
                 <div style={s.checkinWrap}>
                     <button
                         style={{ ...s.checkinBtn, ...(inQueue ? s.checkinDone : {}) }}
@@ -380,7 +422,7 @@ export default function Dashboard({ office, onBack }: Props): ReactElement {
                     <div style={s.modal}>
                         <div style={s.modalTitle}>When are you free?</div>
                         <div style={s.modalSub}>
-                            Select slots — AI picks the best one for you
+                            Select your free slots — we find the quietest one
                         </div>
                         <div style={s.slotsGrid}>
                             {SLOT_OPTIONS.map(slot => (
@@ -398,11 +440,11 @@ export default function Dashboard({ office, onBack }: Props): ReactElement {
                         <button
                             style={{
                                 ...s.modalConfirm,
-                                ...(planLoading ? { opacity: 0.7 } : {})
+                                ...((planLoading || selectedSlots.length === 0) ? { opacity: 0.5 } : {})
                             }}
                             onClick={handlePlanVisit}
-                            disabled={planLoading}>
-                            {planLoading ? 'AI is thinking...' : 'Find Best Time'}
+                            disabled={planLoading || selectedSlots.length === 0}>
+                            {planLoading ? 'Finding best slot...' : selectedSlots.length === 0 ? 'Select at least one slot' : 'Find Best Time'}
                         </button>
                         <button style={s.modalCancel}
                             onClick={() => setShowPlanner(false)}>
@@ -476,6 +518,12 @@ const s: Record<string, React.CSSProperties> = {
     toggleThumb: { position: 'absolute', top: 2, left: 2, width: 20, height: 20, background: '#fff', borderRadius: '50%', transition: 'all 0.2s' },
     thumbOn: { left: 22 },
     anonNote: { textAlign: 'center', fontSize: 11, color: '#6B7280', marginTop: 8, marginBottom: 6 },
+    utilisationChip: { display: 'inline-block', fontSize: 11, color: '#6B7280', marginTop: 6, background: '#F4F6FB', borderRadius: 20, padding: '4px 12px' },
+    lowConfidence: { color: '#D97706', fontSize: 10 },
+    btNote: { fontSize: 11, color: '#92400E', marginTop: 3, fontStyle: 'italic' },
+    tipCard: { margin: '12px 16px 0', background: '#FFFBEB', border: '0.5px solid #FDE68A', borderRadius: 12, padding: '10px 14px', display: 'flex', alignItems: 'flex-start', gap: 8 },
+    tipIcon: { fontSize: 14, flexShrink: 0, marginTop: 1 },
+    tipText: { fontSize: 12, color: '#78350F', lineHeight: 1.5 },
     checkinError: { background: '#FEE2E2', border: '0.5px solid #FECACA', borderRadius: 10, padding: '10px 14px', fontSize: 12, color: '#B91C1C', textAlign: 'center', marginTop: 8 },
     modalOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 200 },
     modal: { background: '#fff', borderRadius: '20px 20px 0 0', padding: '24px 20px 36px', width: '100%', maxWidth: 390 },

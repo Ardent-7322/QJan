@@ -19,14 +19,23 @@ export interface OfficeDetail {
   type: OfficeType;
   city: string;
   current_count: number;
-  estimated_wait_mins: number;
+  estimated_wait_mins: number | null;
+  estimated_wait_display: string;
+  utilisation: number | null;
+  queue_stable: boolean;
+  wait_model: 'mm1' | 'fallback';
   status: string;
   best_time_today: BestTime;
+  anomaly: AnomalyResult;
+  avg_service_time: number;
+  data_freshness: string;
 }
 
 export interface BestTime {
   time: string;
   expected_count: number;
+  confidence: 'low' | 'medium' | 'high';
+  note?: string;
 }
 
 export type OfficeType = 'RTO' | 'Passport' | 'Hospital' | 'Post Office';
