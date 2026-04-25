@@ -27,15 +27,16 @@ def haversine(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
 def _active_checkin_count(office_id: str) -> int:
     """Count check-ins within the rolling CHECKIN_WINDOW_MINUTES."""
     cutoff = datetime.now(timezone.utc) - timedelta(minutes=CHECKIN_WINDOW_MINUTES)
+    # Single field query only — no composite index needed
+    # Filter status in Python to avoid Firestore index requirement
     checkins = (
         db.collection("offices")
         .document(office_id)
         .collection("checkins")
         .where("timestamp", ">=", cutoff)
-        .where("status", "==", "active")
         .stream()
     )
-    return sum(1 for _ in checkins)
+    return sum(1 for c in checkins if c.to_dict().get("status") == "active")
 
 
 def _arrival_rate(office_id: str) -> float | None:
@@ -51,7 +52,7 @@ def _arrival_rate(office_id: str) -> float | None:
         .where("timestamp", ">=", cutoff)
         .stream()
     )
-    count = sum(1 for _ in checkins)
+    count = sum(1 for c in checkins if c.to_dict().get("status") == "active")
     if count < 3:
         return None
     return count / ARRIVAL_RATE_WINDOW_MINUTES   # people per minute
@@ -63,16 +64,20 @@ def _is_rate_limited(office_id: str, session_id: str) -> bool:
     No account needed — just a browser-generated session ID.
     """
     cutoff = datetime.now(timezone.utc) - timedelta(minutes=RATE_LIMIT_WINDOW_MINUTES)
+    # Query by session_id only, filter timestamp in Python
     existing = (
         db.collection("offices")
         .document(office_id)
         .collection("checkins")
         .where("session_id", "==", session_id)
-        .where("timestamp", ">=", cutoff)
-        .limit(1)
         .stream()
     )
-    return any(True for _ in existing)
+    for doc in existing:
+        d = doc.to_dict()
+        ts = d.get("timestamp")
+        if ts and ts >= cutoff:
+            return True
+    return False
 
 
 # ─── Public API ───────────────────────────────────────────────────────────────
