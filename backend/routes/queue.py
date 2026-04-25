@@ -91,6 +91,27 @@ async def checkout(office_id: str, body: CheckinRequest):
     }
 
 
+# ── GET /queue/nearby ────────────────────────────────────────────────────────
+@router.get("/nearby")
+async def get_nearby(lat: float, lng: float, radius: float = 20):
+    offices = get_nearby_offices(lat, lng, radius)
+    return [
+        {
+            "office_id": o["office_id"],
+            "name": o["name"],
+            "type": o["type"],
+            "city": o["city"],
+            "area": o.get("area", ""),
+            "lat": o.get("lat", 0),
+            "lng": o.get("lng", 0),
+            "distance_km": o.get("distance_km", 0),
+            "current_count": o["current_count"],
+            "status": get_status(o["current_count"]),
+        }
+        for o in offices
+    ]
+
+
 # ── GET /queue/ ───────────────────────────────────────────────────────────────
 @router.get("/")
 async def get_all():
