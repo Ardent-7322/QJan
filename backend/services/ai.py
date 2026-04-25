@@ -1,6 +1,12 @@
 from groq import Groq
 from dotenv import load_dotenv
 from services.firebase import get_all_offices, get_queue_data
+import time
+
+# ── Simple in-memory cache for AI search responses ────────────────────────────
+# Avoids hitting Groq API for repeated common queries like "passport" or "RTO"
+_search_cache: dict[str, dict] = {}
+_CACHE_TTL_SECONDS = 300  # 5 minutes
 import os
 import json
 import re
@@ -35,6 +41,13 @@ def ask_groq(prompt: str) -> str:
 # ─────────────────────────────────────────
 
 async def natural_search(query: str) -> dict:
+    # Check cache first
+    cache_key = query.strip().lower()
+    if cache_key in _search_cache:
+        entry = _search_cache[cache_key]
+        if time.time() - entry["cached_at"] < _CACHE_TTL_SECONDS:
+            return entry["result"]
+
     try:
         offices = get_all_offices()
     except Exception:

@@ -17,6 +17,35 @@ const SLOT_OPTIONS: string[] = [
     'Friday 9am', 'Friday 11am', 'Friday 2pm',
 ];
 
+// Operating hours per office type
+const OFFICE_HOURS: Record<string, { weekday: string; saturday: string; sunday: string }> = {
+    'RTO':          { weekday: '9:00 AM – 5:00 PM', saturday: '9:00 AM – 1:00 PM', sunday: 'Closed' },
+    'Passport':     { weekday: '9:00 AM – 5:00 PM', saturday: 'Closed',            sunday: 'Closed' },
+    'Hospital':     { weekday: '8:00 AM – 2:00 PM', saturday: '8:00 AM – 12:00 PM', sunday: 'Emergency only' },
+    'Post Office':  { weekday: '9:00 AM – 5:00 PM', saturday: '9:00 AM – 1:00 PM', sunday: 'Closed' },
+};
+
+function getOfficeHours(type: string): { label: string; open: boolean } {
+    const hours = OFFICE_HOURS[type] || { weekday: '9:00 AM – 5:00 PM', saturday: 'Closed', sunday: 'Closed' };
+    const day = new Date().getDay(); // 0=Sun, 6=Sat
+    const hour = new Date().getHours();
+    let todayHours: string;
+    if (day === 0) todayHours = hours.sunday;
+    else if (day === 6) todayHours = hours.saturday;
+    else todayHours = hours.weekday;
+
+    // Simple open/closed check
+    let open = false;
+    if (todayHours !== 'Closed' && todayHours !== 'Emergency only') {
+        const openHour = parseInt(todayHours.split(':')[0]);
+        const closeStr = todayHours.split('–')[1]?.trim() || '';
+        let closeHour = parseInt(closeStr.split(':')[0]);
+        if (closeStr.includes('PM') && closeHour !== 12) closeHour += 12;
+        open = hour >= openHour && hour < closeHour;
+    }
+    return { label: todayHours, open };
+}
+
 // Office-type specific document tips
 const OFFICE_TIPS: Record<string, string[]> = {
     'RTO': [
@@ -356,6 +385,28 @@ export default function Dashboard({ office, onBack }: Props): ReactElement {
                     <div style={s.anonNote}>
                         Your check-in helps others see real-time queue data · No account needed
                     </div>
+
+                    {/* Report inaccurate data */}
+                    <button
+                        style={s.reportBtn}
+                        onClick={() => {
+                            const confirmed = window.confirm(
+                                'Report this queue count as inaccurate?\n\nThis helps us improve data quality. No account needed.'
+                            );
+                            if (confirmed) {
+                                // Store report locally — backend can pick up later
+                                const reports = JSON.parse(localStorage.getItem('qjan_reports') || '[]');
+                                reports.push({
+                                    office_id: data.office_id,
+                                    reported_count: data.current_count,
+                                    timestamp: new Date().toISOString(),
+                                });
+                                localStorage.setItem('qjan_reports', JSON.stringify(reports.slice(-20)));
+                                alert('Thanks for the report! This helps improve accuracy.');
+                            }
+                        }}>
+                        ⚑ Report inaccurate data
+                    </button>
                     {checkinError && (
                         <div style={s.checkinError}>{checkinError}</div>
                     )}
@@ -522,6 +573,10 @@ const s: Record<string, React.CSSProperties> = {
     lowConfidence: { color: '#D97706', fontSize: 10 },
     btNote: { fontSize: 11, color: '#92400E', marginTop: 3, fontStyle: 'italic' },
     tipCard: { margin: '12px 16px 0', background: '#FFFBEB', border: '0.5px solid #FDE68A', borderRadius: 12, padding: '10px 14px', display: 'flex', alignItems: 'flex-start', gap: 8 },
+    hoursBadge: { fontSize: 10, fontWeight: 500, padding: '3px 8px', borderRadius: 20, marginLeft: 6 },
+    hoursOpen: { background: '#D1FAE5', color: '#065F46', border: '0.5px solid #6EE7B7' },
+    hoursClosed: { background: '#FEE2E2', color: '#991B1B', border: '0.5px solid #FECACA' },
+    reportBtn: { background: 'transparent', border: 'none', color: '#9CA3AF', fontSize: 11, cursor: 'pointer', marginTop: 10, padding: '4px 0', fontFamily: "'Inter',sans-serif", textDecoration: 'underline', display: 'block', width: '100%', textAlign: 'center' as const },
     tipIcon: { fontSize: 14, flexShrink: 0, marginTop: 1 },
     tipText: { fontSize: 12, color: '#78350F', lineHeight: 1.5 },
     checkinError: { background: '#FEE2E2', border: '0.5px solid #FECACA', borderRadius: 10, padding: '10px 14px', fontSize: 12, color: '#B91C1C', textAlign: 'center', marginTop: 8 },

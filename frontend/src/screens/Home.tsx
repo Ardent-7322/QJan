@@ -144,6 +144,11 @@ const OfficeCard = ({ office, onSelect }: OfficeCardProps): ReactElement => {
                             {statusLabel}
                         </span>
                         <span style={s.cardCount}>{office.current_count} in queue</span>
+                        {office.current_count < 3 && (
+                            <span style={s.lowConfBadge} title="Based on limited check-ins">
+                                Low data
+                            </span>
+                        )}
                     </>
                 ) : (
                     <span style={s.noDataPill}>No recent data</span>
@@ -158,6 +163,17 @@ interface Props {
 }
 
 export default function Home({ onSelect }: Props): ReactElement {
+    // Recently searched cities — stored in localStorage, no account needed
+    const getRecentCities = (): string[] => {
+        try { return JSON.parse(localStorage.getItem('qjan_recent_cities') || '[]'); }
+        catch { return []; }
+    };
+    const saveRecentCity = (city: string): void => {
+        const recent = getRecentCities().filter(c => c.toLowerCase() !== city.toLowerCase());
+        const updated = [city, ...recent].slice(0, 5);
+        localStorage.setItem('qjan_recent_cities', JSON.stringify(updated));
+    };
+
     const [offices, setOffices] = useState<Office[]>([]);
     const [filter, setFilter] = useState<string>('All');
     const [loading, setLoading] = useState<boolean>(true);
@@ -230,11 +246,25 @@ export default function Home({ onSelect }: Props): ReactElement {
                 setOffices(nearby);
                 setLocationLabel(city);
                 setCitySearched(true);
+                saveRecentCity(city);
             }
         } catch (err) {
             setSearchError('Could not search. Please check your connection and try again.');
         } finally {
             setLoading(false);
+        }
+    };
+
+    // Pull to refresh
+    const handleRefresh = (): void => {
+        setLoading(true);
+        if (citySearched && locationLabel) {
+            handleSearch(locationLabel);
+        } else {
+            getAllOffices()
+                .then(setOffices)
+                .catch(() => setOffices([]))
+                .finally(() => setLoading(false));
         }
     };
 
@@ -359,17 +389,27 @@ export default function Home({ onSelect }: Props): ReactElement {
                                 </button>
                             </div>
                             <div style={s.quickCities}>
-                                {['Delhi', 'Mumbai', 'Jodhpur', 'Udaipur', 'Kota'].map(city => (
-                                    <button
-                                        key={city}
-                                        style={s.quickCityBtn}
-                                        onClick={() => {
-                                            handleSearch(city);
-                                            setShowCitySearch(false);
-                                        }}>
-                                        {city}
-                                    </button>
-                                ))}
+                                {(() => {
+                                    const recent = getRecentCities();
+                                    const defaults = ['Delhi', 'Mumbai', 'Jodhpur', 'Udaipur', 'Kota'];
+                                    const shown = recent.length > 0
+                                        ? [...recent, ...defaults.filter(d => !recent.map(r=>r.toLowerCase()).includes(d.toLowerCase()))].slice(0, 6)
+                                        : defaults;
+                                    return shown.map((city, i) => (
+                                        <button
+                                            key={city}
+                                            style={{
+                                                ...s.quickCityBtn,
+                                                ...(i < recent.length ? s.recentCityBtn : {})
+                                            }}
+                                            onClick={() => {
+                                                handleSearch(city);
+                                                setShowCitySearch(false);
+                                            }}>
+                                            {i < recent.length ? '🕐 ' : ''}{city}
+                                        </button>
+                                    ));
+                                })()}
                             </div>
                             {searchError && (
                                 <div style={{ background: '#FEE2E2', borderRadius: 10, padding: '10px 14px', fontSize: 12, color: '#B91C1C', marginBottom: 12, textAlign: 'center' }}>
@@ -530,6 +570,9 @@ const s: Record<string, React.CSSProperties> = {
     quickCityBtn: { background: '#F4F6FB', border: '0.5px solid #EAECF0', borderRadius: 20, padding: '6px 14px', fontSize: 12, color: '#374151', cursor: 'pointer', fontFamily: "'Inter',sans-serif" },
     cityModalCancel: { width: '100%', background: 'transparent', border: 'none', color: '#6B7280', fontSize: 14, fontFamily: "'Inter',sans-serif", cursor: 'pointer', padding: 8 },
     noDataPill: { fontSize: 11, fontWeight: 500, padding: '3px 10px', borderRadius: 20, background: '#F4F6FB', color: '#9CA3AF', border: '0.5px solid #E5E7EB' },
+    lowConfBadge: { fontSize: 10, fontWeight: 500, padding: '2px 7px', borderRadius: 20, background: '#FFFBEB', color: '#D97706', border: '0.5px solid #FDE68A', marginTop: 2 },
+    recentCityBtn: { background: '#EFF6FF', borderColor: '#BFDBFE', color: '#1D4ED8' },
+    refreshBtn: { background: 'transparent', border: 'none', fontSize: 16, color: '#6B7280', cursor: 'pointer', padding: '2px 6px', borderRadius: 6, lineHeight: 1 },
     emptyState: { display: 'flex', flexDirection: 'column' as const, alignItems: 'center', justifyContent: 'center', padding: '48px 24px', textAlign: 'center' as const },
     emptyIcon: { fontSize: 40, marginBottom: 16 },
     emptyTitle: { fontSize: 16, fontWeight: 600, color: '#111827', marginBottom: 8 },
