@@ -181,8 +181,13 @@ export default function Home({ onSelect }: Props): ReactElement {
             })
             .catch(() => {
                 setLocationLabel('Location unavailable');
-                setLocationLoading(false); // ← yahan bhi
-                getAllOffices().then(setOffices);
+                setLocationLoading(false);
+                getAllOffices()
+                    .then(setOffices)
+                    .catch(() => {
+                        // Backend not running — show empty state, not crash
+                        setOffices([]);
+                    });
             })
             .finally(() => setLoading(false));
     }, []);
@@ -407,20 +412,28 @@ export default function Home({ onSelect }: Props): ReactElement {
                 )}
 
                 {/* Empty state when no offices match filter */}
-                {!loading && filtered.length === 0 && (
+                {!loading && filtered.length === 0 && offices.length === 0 && (
                     <div style={s.emptyState}>
                         <div style={s.emptyIcon}>🏛️</div>
                         <div style={s.emptyTitle}>No offices found</div>
                         <div style={s.emptyText}>
-                            {filter !== 'All'
-                                ? `No ${filter} offices nearby. Try a different category.`
-                                : 'No offices found in this area. Try searching a different city.'}
+                            No offices in this area yet. Try searching for Jaipur, Jodhpur, or Kota — those have data.
                         </div>
-                        {filter !== 'All' && (
-                            <button style={s.emptyBtn} onClick={() => setFilter('All')}>
-                                Show all offices
-                            </button>
-                        )}
+                        <button style={s.emptyBtn} onClick={() => setShowCitySearch(true)}>
+                            Search a city
+                        </button>
+                    </div>
+                )}
+                {!loading && filtered.length === 0 && offices.length > 0 && (
+                    <div style={s.emptyState}>
+                        <div style={s.emptyIcon}>🏛️</div>
+                        <div style={s.emptyTitle}>No {filter} offices found</div>
+                        <div style={s.emptyText}>
+                            No {filter} offices nearby. Try a different category.
+                        </div>
+                        <button style={s.emptyBtn} onClick={() => setFilter('All')}>
+                            Show all offices
+                        </button>
                     </div>
                 )}
 

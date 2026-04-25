@@ -201,3 +201,162 @@ def seed():
 
 if __name__ == "__main__":
     seed()
+# ── Delhi offices — run this to add Delhi data ────────────────────────────────
+DELHI_OFFICES = [
+    {
+        "id": "rto_delhi_saket",
+        "name": "RTO Delhi — Saket",
+        "type": "RTO",
+        "city": "Delhi",
+        "area": "Saket",
+        "lat": 28.5244,
+        "lng": 77.2066,
+        "avg_service_time": 5.0,
+        "history": {
+            "monday":    [50, 42, 28, 15, 10, 18],
+            "tuesday":   [45, 38, 24, 12, 8, 15],
+            "wednesday": [48, 40, 26, 14, 9, 16],
+            "thursday":  [42, 35, 22, 11, 7, 13],
+            "friday":    [55, 48, 30, 16, 12, 20],
+        }
+    },
+    {
+        "id": "rto_delhi_rohini",
+        "name": "RTO Delhi — Rohini",
+        "type": "RTO",
+        "city": "Delhi",
+        "area": "Rohini Sector 3",
+        "lat": 28.7041,
+        "lng": 77.1025,
+        "avg_service_time": 4.5,
+        "history": {
+            "monday":    [40, 35, 22, 12, 8, 14],
+            "tuesday":   [38, 32, 20, 10, 6, 12],
+            "wednesday": [42, 36, 23, 13, 9, 15],
+            "thursday":  [35, 30, 18, 10, 5, 11],
+            "friday":    [48, 42, 27, 15, 10, 17],
+        }
+    },
+    {
+        "id": "passport_delhi_patiala_house",
+        "name": "Passport Seva Kendra — Patiala House",
+        "type": "Passport",
+        "city": "Delhi",
+        "area": "Patiala House",
+        "lat": 28.6198,
+        "lng": 77.2411,
+        "avg_service_time": 6.0,
+        "history": {
+            "monday":    [35, 28, 18, 9, 6, 11],
+            "tuesday":   [30, 25, 16, 8, 5, 10],
+            "wednesday": [33, 27, 17, 9, 6, 11],
+            "thursday":  [28, 22, 14, 7, 4,  9],
+            "friday":    [40, 32, 20, 11, 7, 13],
+        }
+    },
+    {
+        "id": "passport_delhi_dwarka",
+        "name": "Passport Seva Kendra — Dwarka",
+        "type": "Passport",
+        "city": "Delhi",
+        "area": "Dwarka Sector 10",
+        "lat": 28.5823,
+        "lng": 77.0500,
+        "avg_service_time": 6.0,
+        "history": {
+            "monday":    [32, 26, 17, 8, 5, 10],
+            "tuesday":   [28, 23, 15, 7, 4,  9],
+            "wednesday": [30, 25, 16, 8, 5, 10],
+            "thursday":  [26, 21, 13, 6, 3,  8],
+            "friday":    [37, 30, 19, 10, 6, 12],
+        }
+    },
+    {
+        "id": "aiims_delhi_opd",
+        "name": "AIIMS OPD — New Delhi",
+        "type": "Hospital",
+        "city": "Delhi",
+        "area": "Ansari Nagar",
+        "lat": 28.5672,
+        "lng": 77.2100,
+        "avg_service_time": 3.5,
+        "history": {
+            "monday":    [80, 70, 55, 35, 20, 25],
+            "tuesday":   [75, 65, 50, 30, 18, 22],
+            "wednesday": [78, 68, 52, 32, 19, 24],
+            "thursday":  [70, 60, 46, 28, 16, 20],
+            "friday":    [85, 75, 58, 38, 22, 28],
+        }
+    },
+    {
+        "id": "gtb_hospital_delhi",
+        "name": "GTB Hospital OPD",
+        "type": "Hospital",
+        "city": "Delhi",
+        "area": "Dilshad Garden",
+        "lat": 28.6812,
+        "lng": 77.3090,
+        "avg_service_time": 3.0,
+        "history": {
+            "monday":    [65, 58, 44, 28, 16, 21],
+            "tuesday":   [60, 52, 40, 25, 14, 19],
+            "wednesday": [63, 55, 42, 26, 15, 20],
+            "thursday":  [55, 48, 37, 22, 12, 17],
+            "friday":    [70, 62, 47, 30, 18, 23],
+        }
+    },
+    {
+        "id": "post_office_connaught",
+        "name": "GPO Connaught Place",
+        "type": "Post Office",
+        "city": "Delhi",
+        "area": "Connaught Place",
+        "lat": 28.6315,
+        "lng": 77.2167,
+        "avg_service_time": 4.0,
+        "history": {
+            "monday":    [30, 25, 18, 10, 7, 12],
+            "tuesday":   [28, 22, 16, 9, 6, 11],
+            "wednesday": [32, 26, 19, 11, 7, 13],
+            "thursday":  [25, 20, 14, 8, 5, 10],
+            "friday":    [38, 32, 22, 12, 8, 15],
+        }
+    },
+    {
+        "id": "post_office_lajpat",
+        "name": "Post Office — Lajpat Nagar",
+        "type": "Post Office",
+        "city": "Delhi",
+        "area": "Lajpat Nagar",
+        "lat": 28.5706,
+        "lng": 77.2400,
+        "avg_service_time": 3.5,
+        "history": {
+            "monday":    [22, 18, 13, 7, 5,  9],
+            "tuesday":   [20, 16, 12, 6, 4,  8],
+            "wednesday": [24, 19, 14, 8, 5, 10],
+            "thursday":  [18, 15, 11, 6, 3,  7],
+            "friday":    [28, 24, 16, 9, 6, 12],
+        }
+    },
+]
+
+def seed_delhi():
+    for office in DELHI_OFFICES:
+        office_id = office.pop("id")
+        office["current_count"] = 0
+        db.collection("offices").document(office_id).set(office)
+        print(f"Seeded: {office['name']}")
+    print(f"\n✅ {len(DELHI_OFFICES)} Delhi offices seeded successfully!")
+
+if __name__ == "__main__":
+    import sys
+    if len(sys.argv) > 1 and sys.argv[1] == "delhi":
+        seed_delhi()
+    else:
+        # Original seed
+        for office in OFFICES:
+            office_id = office.pop("id")
+            db.collection("offices").document(office_id).set(office)
+            print(f"Seeded: {office['name']}")
+        print("✅ All offices seeded!")
