@@ -505,16 +505,12 @@ export default function Home({ onSelect }: Props): ReactElement {
                 )}
             </div>
 
-            {/* Bottom Nav */}
+            {/* Bottom Nav — Home only */}
             <div style={s.bottomNav}>
-                {(['Home', 'Search', 'Alerts', 'Settings'] as const).map((item, i) => (
-                    <div key={item} style={s.navItem}>
-                        <NavIcon name={item} active={i === 0} />
-                        <span style={{ ...s.navLabel, ...(i === 0 ? { color: '#1A56DB' } : {}) }}>
-                            {item}
-                        </span>
-                    </div>
-                ))}
+                <div style={s.navItem}>
+                    <NavIcon name="Home" active={true} />
+                    <span style={{ ...s.navLabel, color: '#1A56DB' }}>Home</span>
+                </div>
             </div>
         </div>
     );
@@ -551,7 +547,7 @@ const s: Record<string, React.CSSProperties> = {
     cardCount: { fontSize: 11, color: '#9CA3AF' },
     loadingWrap: { display: 'flex', justifyContent: 'center', padding: 40 },
     loadingText: { fontSize: 14, color: '#6B7280' },
-    bottomNav: { position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: 390, background: '#fff', borderTop: '0.5px solid #EAECF0', display: 'flex', padding: '10px 0 16px', zIndex: 100 },
+    bottomNav: { position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: 390, background: '#fff', borderTop: '0.5px solid #EAECF0', display: 'flex', justifyContent: 'center', padding: '10px 0 16px', zIndex: 100 },
     navItem: { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, cursor: 'pointer' },
     navLabel: { fontSize: 10, fontWeight: 500, color: '#9CA3AF' },
     locationBar: { display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: '#F4F6FB', border: '0.5px solid #EAECF0', borderRadius: 12, marginBottom: 14 },
