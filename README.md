@@ -59,14 +59,3 @@ The AI handles natural language search (so you can type "renew my license" inste
 
 ---
 
-## Running locally
-
-**Backend**
-```bash
-cd backend
-.venv\Scripts\activate        # Windows
-pip install -r requirements.txt
-uvicorn main:app --reload
-```
-
-Add a `.env` file in `backend/`:
