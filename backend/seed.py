@@ -202,6 +202,7 @@ def seed():
 if __name__ == "__main__":
     seed()
 # ── Delhi offices — run this to add Delhi data ────────────────────────────────
+
 DELHI_OFFICES = [
     {
         "id": "rto_delhi_saket",
@@ -348,19 +349,6 @@ def seed_delhi():
         db.collection("offices").document(office_id).set(office)
         print(f"Seeded: {office['name']}")
     print(f"\n✅ {len(DELHI_OFFICES)} Delhi offices seeded successfully!")
-
-if __name__ == "__main__":
-    import sys
-    if len(sys.argv) > 1 and sys.argv[1] == "delhi":
-        seed_delhi()
-    else:
-        # Original seed
-        for office in OFFICES:
-            office_id = office.pop("id")
-            db.collection("offices").document(office_id).set(office)
-            print(f"Seeded: {office['name']}")
-        print("✅ All offices seeded!")
-
 
 def seed_mock_checkins():
     """

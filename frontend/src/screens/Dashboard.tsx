@@ -254,7 +254,7 @@ export default function Dashboard({ office, onBack }: Props): ReactElement {
                         </div>
                         {data.utilisation !== null && data.utilisation !== undefined && (
                             <div style={s.utilisationChip}>
-                                Office is {Math.round(data.utilisation * 100)}% busy
+                                Office is {Math.min(100, Math.round(data.utilisation * 100))}% busy
                             </div>
                         )}
                     </div>
@@ -373,7 +373,7 @@ export default function Dashboard({ office, onBack }: Props): ReactElement {
                             stroke="white" strokeWidth="2.5" strokeLinecap="round">
                             <polyline points="20 6 9 17 4 12" />
                         </svg>
-                        {inQueue ? "You're in the queue" : "I'm here now"}
+                        {inQueue ? "Checked in" : "I'm here now"}
                     </button>
                     {inQueue && (
                         <button style={s.checkoutBtn} onClick={handleCheckin}>

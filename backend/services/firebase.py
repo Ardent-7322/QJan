@@ -161,16 +161,28 @@ def checkout_user(office_id: str, session_id: str) -> bool:
         return False
 
     cutoff = datetime.now(timezone.utc) - timedelta(minutes=CHECKIN_WINDOW_MINUTES)
+    # Query by session_id only, filter in Python to avoid index requirement
     results = (
         ref.collection("checkins")
         .where("session_id", "==", session_id)
-        .where("timestamp", ">=", cutoff)
-        .where("status", "==", "active")
-        .order_by("timestamp", direction=firestore.Query.DESCENDING)
-        .limit(1)
         .stream()
     )
+    # Find most recent active checkin within window
+    best_doc = None
+    best_ts = None
     for doc in results:
-        doc.reference.update({"status": "left"})
+        d = doc.to_dict()
+        ts = d.get("timestamp")
+        status = d.get("status")
+        if status == "active" and ts and ts >= cutoff:
+            if best_ts is None or ts > best_ts:
+                best_doc = doc
+                best_ts = ts
+
+    if best_doc:
+        best_doc.reference.update({"status": "left"})
         return True
-    return False
+
+    # If no active checkin found for this session, still return True
+    # so UI doesn't show error (user just wasn't checked in)
+    return True
