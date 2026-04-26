@@ -242,11 +242,24 @@ export default function Home({ onSelect }: Props): ReactElement {
             if (data.length > 0) {
                 const lat = parseFloat(data[0].lat);
                 const lng = parseFloat(data[0].lon);
-                const nearby = await getNearbyOffices(lat, lng, 20);
+                let nearby = await getNearbyOffices(lat, lng, 20);
+
+                // If radius search returns nothing, fall back to city name match
+                if (nearby.length === 0) {
+                    const all = await getAllOffices();
+                    nearby = all.filter(o =>
+                        o.city.toLowerCase().includes(city.toLowerCase()) ||
+                        city.toLowerCase().includes(o.city.toLowerCase())
+                    );
+                }
+
                 setOffices(nearby);
                 setLocationLabel(city);
                 setCitySearched(true);
                 saveRecentCity(city);
+                setShowCitySearch(false);
+            } else {
+                setSearchError('City not found. Try a different spelling.');
             }
         } catch (err) {
             setSearchError('Could not search. Please check your connection and try again.');
@@ -406,7 +419,7 @@ export default function Home({ onSelect }: Props): ReactElement {
                                                 handleSearch(city);
                                                 setShowCitySearch(false);
                                             }}>
-                                            {i < recent.length ? '🕐 ' : ''}{city}
+                                            {city}
                                         </button>
                                     ));
                                 })()}

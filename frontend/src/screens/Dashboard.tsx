@@ -49,24 +49,24 @@ function getOfficeHours(type: string): { label: string; open: boolean } {
 // Office-type specific document tips
 const OFFICE_TIPS: Record<string, string[]> = {
     'RTO': [
-        'Carry original RC, insurance, and pollution certificate.',
-        'DL renewal needs old DL + address proof + medical form.',
-        'Vehicle transfer needs Form 29 & 30, original RC, insurance.',
+        'Carry original RC, insurance and pollution certificate.',
+        'DL renewal: bring old DL, address proof and medical form.',
+        'Vehicle transfer: bring Form 29, Form 30 and original RC.',
     ],
     'Passport': [
-        'Carry original Aadhaar + 2 self-attested copies.',
-        'Address proof, DOB proof, and old passport if renewing.',
-        'Original documents only — photocopies alone are rejected.',
+        'Carry original Aadhaar with two self-attested copies.',
+        'Bring address proof, DOB proof and old passport if renewing.',
+        'Photocopies alone are not accepted. Bring originals.',
     ],
     'Hospital': [
-        'Carry previous prescriptions and test reports.',
-        'OPD registration card speeds up the process.',
-        'Arrive 15 mins early for OPD token registration.',
+        'Bring previous prescriptions and test reports.',
+        'OPD registration card speeds up entry.',
+        'Arrive 15 minutes early for token registration.',
     ],
     'Post Office': [
-        'Carry valid ID proof for money orders and registered post.',
-        'Speed Post: pack and seal the parcel before arriving.',
-        'Savings account work needs passbook + Aadhaar.',
+        'Carry valid ID for money orders and registered post.',
+        'Speed Post: pack and seal before arriving.',
+        'Savings account work needs passbook and Aadhaar.',
     ],
 };
 
@@ -280,7 +280,7 @@ export default function Dashboard({ office, onBack }: Props): ReactElement {
                         <div style={s.anomalyTitle}>⚠ {data.anomaly.message}</div>
                         {data.best_time_today && (
                             <div style={s.anomalySuggestion}>
-                                💡 Try visiting at <strong>{data.best_time_today.time}</strong> — avg only {data.best_time_today.expected_count} people expected.
+                                Try visiting at <strong>{data.best_time_today.time}</strong>, avg only {data.best_time_today.expected_count} people.
                             </div>
                         )}
                     </div>
@@ -362,7 +362,6 @@ export default function Dashboard({ office, onBack }: Props): ReactElement {
                 {/* Checkin */}
                 {/* Office-type specific document tip */}
                 <div style={s.tipCard}>
-                    <span style={s.tipIcon}>📋</span>
                     <span style={s.tipText}>{getOfficeTip(data.type)}</span>
                 </div>
 
