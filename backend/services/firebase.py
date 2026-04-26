@@ -62,7 +62,12 @@ def _is_rate_limited(office_id: str, session_id: str) -> bool:
     """
     Check if this anonymous session already checked in recently.
     No account needed — just a browser-generated session ID.
+    Mock/seed sessions are never rate limited.
     """
+    # Never rate limit seed/mock sessions
+    if session_id.startswith("seed_mock_") or session_id.startswith("mock_"):
+        return False
+
     cutoff = datetime.now(timezone.utc) - timedelta(minutes=RATE_LIMIT_WINDOW_MINUTES)
     # Query by session_id only, filter timestamp in Python
     existing = (
