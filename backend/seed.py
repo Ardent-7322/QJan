@@ -205,7 +205,7 @@ if __name__ == "__main__":
 DELHI_OFFICES = [
     {
         "id": "rto_delhi_saket",
-        "name": "RTO Delhi — Saket",
+        "name": "RTO Delhi, Saket",
         "type": "RTO",
         "city": "Delhi",
         "area": "Saket",
@@ -222,7 +222,7 @@ DELHI_OFFICES = [
     },
     {
         "id": "rto_delhi_rohini",
-        "name": "RTO Delhi — Rohini",
+        "name": "RTO Delhi, Rohini",
         "type": "RTO",
         "city": "Delhi",
         "area": "Rohini Sector 3",
@@ -239,7 +239,7 @@ DELHI_OFFICES = [
     },
     {
         "id": "passport_delhi_patiala_house",
-        "name": "Passport Seva Kendra — Patiala House",
+        "name": "Passport Seva Kendra, Patiala House",
         "type": "Passport",
         "city": "Delhi",
         "area": "Patiala House",
@@ -256,7 +256,7 @@ DELHI_OFFICES = [
     },
     {
         "id": "passport_delhi_dwarka",
-        "name": "Passport Seva Kendra — Dwarka",
+        "name": "Passport Seva Kendra, Dwarka",
         "type": "Passport",
         "city": "Delhi",
         "area": "Dwarka Sector 10",
@@ -273,7 +273,7 @@ DELHI_OFFICES = [
     },
     {
         "id": "aiims_delhi_opd",
-        "name": "AIIMS OPD — New Delhi",
+        "name": "AIIMS OPD, New Delhi",
         "type": "Hospital",
         "city": "Delhi",
         "area": "Ansari Nagar",
@@ -355,6 +355,68 @@ if __name__ == "__main__":
         seed_delhi()
     else:
         # Original seed
+        for office in OFFICES:
+            office_id = office.pop("id")
+            db.collection("offices").document(office_id).set(office)
+            print(f"Seeded: {office['name']}")
+        print("✅ All offices seeded!")
+
+
+def seed_mock_checkins():
+    """
+    Seed realistic mock check-ins for demo purposes.
+    Creates check-ins within last 20 minutes so they show as active queue.
+    Run this after seeding offices: python seed.py mock
+    """
+    from datetime import datetime, timedelta, timezone
+    import random
+
+    # office_id -> how many active people to simulate
+    MOCK_QUEUE = {
+        "rto_jobner":                    12,
+        "phulera_govt_hospital_opd":     18,
+        "post_office_phulera":           7,
+        "passport_seva_jaipur":          5,
+        "rto_delhi_saket":               15,
+        "rto_delhi_rohini":              9,
+        "passport_delhi_patiala_house":  11,
+        "passport_delhi_dwarka":         6,
+        "aiims_delhi_opd":               24,
+        "gtb_hospital_delhi":            14,
+        "post_office_connaught":         8,
+        "post_office_lajpat":            4,
+    }
+
+    now = datetime.now(timezone.utc)
+    total = 0
+    for office_id, count in MOCK_QUEUE.items():
+        ref = db.collection("offices").document(office_id)
+        if not ref.get().exists:
+            print(f"  Skipping {office_id} — not found")
+            continue
+        for i in range(count):
+            # Spread check-ins over last 15 minutes
+            mins_ago = random.uniform(0, 15)
+            ts = now - timedelta(minutes=mins_ago)
+            ref.collection("checkins").add({
+                "timestamp": ts,
+                "status": "active",
+                "session_id": f"seed_mock_{office_id}_{i}",
+            })
+        print(f"  {office_id}: {count} checkins added")
+        total += count
+    print(f"\n✅ {total} mock checkins seeded across {len(MOCK_QUEUE)} offices!")
+    print("   These expire in 20 minutes — re-run to refresh.")
+
+
+if __name__ == "__main__":
+    import sys
+    arg = sys.argv[1] if len(sys.argv) > 1 else ""
+    if arg == "delhi":
+        seed_delhi()
+    elif arg == "mock":
+        seed_mock_checkins()
+    else:
         for office in OFFICES:
             office_id = office.pop("id")
             db.collection("offices").document(office_id).set(office)

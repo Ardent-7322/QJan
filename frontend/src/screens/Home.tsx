@@ -233,36 +233,24 @@ export default function Home({ onSelect }: Props): ReactElement {
         setLoading(true);
         setSearchError(null);
         try {
-            // Nominatim se city ke coordinates lo - free
-            const res = await fetch(
-                `https://nominatim.openstreetmap.org/search?q=${city}&format=json&limit=1`,
-                { headers: { 'Accept-Language': 'en' } }
+            // Match by city name directly — no external API needed
+            const all = await getAllOffices();
+            const matched = all.filter(o =>
+                o.city.toLowerCase().includes(city.toLowerCase()) ||
+                city.toLowerCase().includes(o.city.toLowerCase()) ||
+                (o.area && o.area.toLowerCase().includes(city.toLowerCase()))
             );
-            const data = await res.json();
-            if (data.length > 0) {
-                const lat = parseFloat(data[0].lat);
-                const lng = parseFloat(data[0].lon);
-                let nearby = await getNearbyOffices(lat, lng, 20);
-
-                // If radius search returns nothing, fall back to city name match
-                if (nearby.length === 0) {
-                    const all = await getAllOffices();
-                    nearby = all.filter(o =>
-                        o.city.toLowerCase().includes(city.toLowerCase()) ||
-                        city.toLowerCase().includes(o.city.toLowerCase())
-                    );
-                }
-
-                setOffices(nearby);
+            if (matched.length > 0) {
+                setOffices(matched);
                 setLocationLabel(city);
                 setCitySearched(true);
                 saveRecentCity(city);
                 setShowCitySearch(false);
             } else {
-                setSearchError('City not found. Try a different spelling.');
+                setSearchError(`No offices found in ${city}. Try Jaipur, Delhi or Jodhpur.`);
             }
         } catch (err) {
-            setSearchError('Could not search. Please check your connection and try again.');
+            setSearchError('Could not load offices. Make sure backend is running.');
         } finally {
             setLoading(false);
         }
