@@ -22,11 +22,11 @@ No account needed. No personal data collected. Just open, check, and go.
 
 Everyone who visits an office taps "I'm here now" when they arrive. That anonymous check-in updates the live count for everyone else. The more people use it, the more accurate it gets.
 
-**Wait time** is calculated using M/M/1 queuing theory — a standard formula used in operations research that accounts for how fast people are arriving vs how fast the office is serving them. It is more accurate than a simple multiply-and-guess approach, especially when queues are growing.
+**Wait time** is calculated using M/M/1 queuing theory - a standard formula used in operations research that accounts for how fast people are arriving vs how fast the office is serving them. It is more accurate than a simple multiply-and-guess approach, especially when queues are growing.
 
 **Best time** looks at historical check-in patterns for that office on the same day of the week and finds the quietest future slot. It never suggests a time that has already passed.
 
-**Anomaly detection** triggers when the queue reaches 85% of the office's service capacity — the point where wait times start rising sharply. It then tells you the next quietest slot to visit instead.
+**Anomaly detection** triggers when the queue reaches 85% of the office's service capacity - the point where wait times start rising sharply. It then tells you the next quietest slot to visit instead.
 
 ---
 
@@ -36,7 +36,7 @@ Everyone who visits an office taps "I'm here now" when they arrive. That anonymo
 |---|---|
 | Frontend | React + TypeScript |
 | Backend | Python + FastAPI |
-| AI | Groq — Llama 3.1 8B |
+| AI | Groq - Llama 3.1 8B |
 | Database | Firebase Firestore |
 
 The AI handles natural language search (so you can type "renew my license" instead of knowing which office does what) and the visit planner (picks the best slot from your free time).
@@ -46,10 +46,10 @@ The AI handles natural language search (so you can type "renew my license" inste
 ## Pros
 
 - Works without any government involvement or approval
-- Fully anonymous — no account, no phone number, no tracking
+- Fully anonymous - no account, no phone number, no tracking
 - Gets more accurate as more people use it
 - AI search means you do not need to know which office handles what
-- Queuing theory gives honest estimates — shows "queue is growing" instead of a fake number when things are unstable
+- Queuing theory gives honest estimates - shows "queue is growing" instead of a fake number when things are unstable
 
 ## Cons
 
@@ -59,39 +59,4 @@ The AI handles natural language search (so you can type "renew my license" inste
 
 ---
 
-## Running locally
 
-**Backend**
-```bash
-cd backend
-.venv\Scripts\activate        # Windows
-pip install -r requirements.txt
-uvicorn main:app --reload
-```
-
-Add a `.env` file in `backend/`:
-```
-GROQ_API_KEY=your_key_here
-```
-
-**Frontend**
-```bash
-cd frontend
-npm install
-npm start
-```
-
-Add a `.env` file in `frontend/`:
-```
-REACT_APP_API_URL=http://localhost:8000/api/queue
-```
-
-**Seed data**
-```bash
-cd backend
-python seed.py          # base offices
-python seed.py delhi    # Delhi offices
-python seed_mock.py     # mock active check-ins for demo
-```
-
-API docs at `http://localhost:8000/docs`
