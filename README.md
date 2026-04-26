@@ -8,7 +8,7 @@ QJan fixes this. Check the queue before you leave.
 
 ## What it does
 
-- Shows how many people are currently at any government office
+- Shows how many people are currently at any office
 - Tells you how long you will roughly wait
 - Suggests the best time to visit today based on past patterns
 - Warns you if the queue is unusually high or low
