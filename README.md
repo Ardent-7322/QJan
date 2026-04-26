@@ -22,11 +22,11 @@ No account needed. No personal data collected. Just open, check, and go.
 
 Everyone who visits an office taps "I'm here now" when they arrive. That anonymous check-in updates the live count for everyone else. The more people use it, the more accurate it gets.
 
-**Wait time** is calculated using M/M/1 queuing theory — a standard formula used in operations research that accounts for how fast people are arriving vs how fast the office is serving them. It is more accurate than a simple multiply-and-guess approach, especially when queues are growing.
+**Wait time** is calculated using M/M/1 queuing theory - a standard formula used in operations research that accounts for how fast people are arriving vs how fast the office is serving them. It is more accurate than a simple multiply-and-guess approach, especially when queues are growing.
 
 **Best time** looks at historical check-in patterns for that office on the same day of the week and finds the quietest future slot. It never suggests a time that has already passed.
 
-**Anomaly detection** triggers when the queue reaches 85% of the office's service capacity — the point where wait times start rising sharply. It then tells you the next quietest slot to visit instead.
+**Anomaly detection** triggers when the queue reaches 85% of the office's service capacity - the point where wait times start rising sharply. It then tells you the next quietest slot to visit instead.
 
 ---
 
